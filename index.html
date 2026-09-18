@@ -306,7 +306,7 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
 
 <script>
 'use strict';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const KEY = 'setclick:v1';
 const BPM_MIN = 20, BPM_MAX = 300;
 const DEBUG = /[?&]debug\b/.test(location.search);
@@ -686,8 +686,12 @@ function renderChips() {
     `<button class="chip-tab" role="tab" data-view="free" aria-selected="${ui.view === 'free'}">${ICON.note}フリー</button><span class="chip-sep"></span>` +
     S.setlists.map(sl => `<button class="chip-tab" role="tab" data-sl="${sl.id}" aria-selected="${ui.view === 'setlist' && sl.id === S.currentId}">${esc(sl.name)}<span class="n">${sl.songs.length}</span></button>`).join('') +
     '<button class="chip-tab add" data-x="new" aria-label="新しいセトリ">＋ セトリ</button>';
+  // 選択中のタブを横スクロールの中央へ（画面幅によらず、タブ列の中での位置で計算する）
   const sel = nav.querySelector('[aria-selected="true"]');
-  if (sel) nav.scrollLeft = Math.max(0, sel.offsetLeft - nav.clientWidth / 2 + sel.offsetWidth / 2);
+  if (sel) {
+    const nr = nav.getBoundingClientRect(), cr = sel.getBoundingClientRect();
+    nav.scrollLeft += (cr.left + cr.width / 2) - (nr.left + nr.width / 2);
+  }
 }
 
 function renderList() {
@@ -1186,10 +1190,10 @@ function openNewSetlist() {
   el.querySelector('[data-x="create"]').addEventListener('click', create);
   el.querySelector('[data-x="cancel"]').addEventListener('click', () => closeSheet());
   el.querySelector('[data-x="import"]').addEventListener('click', () => {
-    const sl = decodeShared(el.querySelector('[data-x="link"]').value);
-    if (!sl) { toast('共有リンクを読み取れませんでした'); return; }
+    const lists = decodeShared(el.querySelector('[data-x="link"]').value);
+    if (!lists) { toast('共有リンクを読み取れませんでした'); return; }
     closeSheet();
-    importSetlist(sl, false);
+    importSetlists(lists, false);
   });
 }
 async function setlistAction(x) {
@@ -1234,18 +1238,28 @@ function b64uDecode(s) {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new TextDecoder().decode(bytes);
 }
+// 共有リンク。1件は #import=（v1.1 以前とも互換）、複数件は #importAll=（旧版は無視するので誤読しない）
 function decodeShared(text) {
-  const m = String(text).match(/#import=([A-Za-z0-9_-]+)/);
+  const m = String(text).match(/#import(?:All)?=([A-Za-z0-9_-]+)/);
   if (!m) return null;
   try {
     const p = JSON.parse(b64uDecode(m[1]));
-    return sanitizeSetlist({ name: p.n, songs: (Array.isArray(p.s) ? p.s : []).map(a => ({ title: a[0], bpm: a[1], ts: a[2], sub: a[3], note: a[4] })) });
+    const toList = x => sanitizeSetlist({ name: x?.n, songs: (Array.isArray(x?.s) ? x.s : []).map(a => ({ title: a[0], bpm: a[1], ts: a[2], sub: a[3], note: a[4] })) });
+    const lists = (Array.isArray(p.L) ? p.L : [p]).map(toList).filter(Boolean);
+    return lists.length ? lists : null;
   } catch { return null; }
 }
-async function shareSetlist(sl) {
-  const payload = { v: 2, n: sl.name, s: sl.songs.map(s => [s.title, s.bpm, s.ts, s.sub, s.note]) };
-  const url = `${location.origin}${location.pathname}#import=${b64uEncode(JSON.stringify(payload))}`;
-  const text = `SetClick のセトリ「${sl.name}」（${sl.songs.length}曲）`;
+function shareUrl(lists) {
+  const pack = l => ({ n: l.name, s: l.songs.map(s => [s.title, s.bpm, s.ts, s.sub, s.note]) });
+  const multi = lists.length > 1;
+  const payload = multi ? { v: 3, L: lists.map(pack) } : { v: 2, ...pack(lists[0]) };
+  return `${location.origin}${location.pathname}#${multi ? 'importAll' : 'import'}=${b64uEncode(JSON.stringify(payload))}`;
+}
+const shareSetlist = sl => shareLists([sl]);
+async function shareLists(lists) {
+  const url = shareUrl(lists);
+  const total = lists.reduce((n, l) => n + l.songs.length, 0);
+  const text = lists.length === 1 ? `SetClick のセトリ「${lists[0].name}」（${total}曲）` : `SetClick のセトリ${lists.length}件（計${total}曲）`;
   if (navigator.share) {
     try { await navigator.share({ title: text, text, url }); return; }
     catch (e) { if (e && e.name === 'AbortError') return; }
@@ -1253,22 +1267,32 @@ async function shareSetlist(sl) {
   try { await navigator.clipboard.writeText(url); toast('共有リンクをコピーしました'); }
   catch { await dialog({ title: '共有リンク', message: 'コピーして送ってください', input: url, ok: '閉じる' }); }
 }
-async function importSetlist(sl, ask = true) {
+async function importSetlists(lists, ask = true) {
+  const total = lists.reduce((n, l) => n + l.songs.length, 0);
   if (ask) {
-    const ok = await dialog({ title: `「${sl.name}」を取り込みますか？`, message: `${sl.songs.length}曲。新しいセトリとして追加します（今あるセトリはそのまま）。`, ok: '取り込む' });
+    const one = lists.length === 1;
+    const ok = await dialog({
+      title: one ? `「${lists[0].name}」を取り込みますか？` : `${lists.length}件のセトリを取り込みますか？`,
+      message: `${one ? '' : lists.map(l => l.name).join('、') + '　'}計${total}曲。新しいセトリとして追加します（今あるセトリはそのまま）。`,
+      ok: '取り込む',
+    });
     if (!ok) return;
   }
-  sl.id = uid(); sl.songs.forEach(s => { s.id = uid(); });
-  sl.name = uniqueName(sl.name);
-  S.setlists.push(sl); S.currentId = sl.id; ui.view = 'setlist'; ui.cuedId = null; ui.edit = false;
-  save(); render(); window.scrollTo({ top: 0 }); toast(`「${sl.name}」を取り込みました`);
+  for (const sl of lists) {
+    sl.id = uid(); sl.songs.forEach(s => { s.id = uid(); });
+    sl.name = uniqueName(sl.name);
+    S.setlists.push(sl);
+  }
+  S.currentId = lists[0].id; ui.view = 'setlist'; ui.cuedId = null; ui.edit = false;
+  save(); render(); window.scrollTo({ top: 0 });
+  toast(lists.length === 1 ? `「${lists[0].name}」を取り込みました` : `${lists.length}件のセトリを取り込みました`);
 }
 function handleImportHash() {
-  if (!location.hash.startsWith('#import=')) return;
-  const sl = decodeShared(location.hash);
+  if (!/^#import(All)?=/.test(location.hash)) return;
+  const lists = decodeShared(location.hash);
   history.replaceState(null, '', location.pathname + location.search);
-  if (!sl) { toast('共有リンクを読み込めませんでした'); return; }
-  importSetlist(sl, true);
+  if (!lists) { toast('共有リンクを読み込めませんでした'); return; }
+  importSetlists(lists, true);
 }
 function exportBackup() {
   const data = JSON.stringify({ app: 'setclick', v: 2, exportedAt: new Date().toISOString(), setlists: S.setlists }, null, 2);
@@ -1318,7 +1342,8 @@ function openSettings() {
       <div class="field"><div class="field-label">バックアップ</div>
         <div class="two"><button type="button" class="ghost-btn" data-x="export">書き出し</button><button type="button" class="ghost-btn" data-x="import">読み込み</button></div>
         <input type="file" accept="application/json,.json" data-x="file" hidden>
-        <p class="hint">データはこの端末のブラウザ内だけに保存されています。機種変更の前や、たまに書き出しておくと安心です。</p>
+        <button type="button" class="ghost-btn" data-x="shareall" style="margin-top:8px">全セトリをリンクで共有</button>
+        <p class="hint">データはこの端末のブラウザ内だけに保存されています。機種変更の前や、たまに書き出しておくと安心です。全セトリの共有リンクは、別の端末やメンバーへの一括コピーにも使えます。</p>
       </div>
       <div>
         <p class="hint center">SetClick v${APP_VERSION}</p>
@@ -1355,6 +1380,7 @@ function openSettings() {
     if (x === 'accent') { st.accent = !st.accent; changed(); }
     else if (x === 'flash') { st.flash = !st.flash; changed(); }
     else if (x === 'export') exportBackup();
+    else if (x === 'shareall') shareLists(S.setlists);
     else if (x === 'import') el.querySelector('[data-x="file"]').click();
     else if (x === 'close') closeSheet();
   });

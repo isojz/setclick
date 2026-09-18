@@ -1,9 +1,9 @@
 // SetClick — オフライン用 Service Worker
-// キャッシュ優先で即起動（ライブハウスの地下など電波が弱い場所でも開ける）。
-// ネットワークがあれば裏で更新し、次回起動時に新しい版になる。
-// アセット構成を変えたときは CACHE の番号を上げる。
-const CACHE = 'setclick-v1';
+// ページ本体（index.html）はネット優先：更新がすぐ届く。2.5 秒で応答がなければキャッシュで開く（ライブハウスの地下対策）。
+// アイコン等はキャッシュ優先。アセット構成を変えたときは CACHE の番号を上げる。
+const CACHE = 'setclick-v2';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
+const NAV_TIMEOUT = 2500;
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -20,15 +20,29 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
-  // ページ遷移は ?debug や #import 付きでも同じ index.html を返す
-  const key = req.mode === 'navigate' ? './index.html' : req;
+
+  if (req.mode === 'navigate') {
+    // ?debug や #import 付きでも同じ index.html を使う
+    e.respondWith(caches.open(CACHE).then(async cache => {
+      const net = fetch(req).then(res => {
+        if (res && res.ok && res.type === 'basic') cache.put('./index.html', res.clone());
+        return res;
+      });
+      try {
+        return await Promise.race([net, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), NAV_TIMEOUT))]);
+      } catch {
+        e.waitUntil(net.catch(() => null)); // 遅れて届いた新版は次回のためにキャッシュへ
+        return (await cache.match('./index.html')) || net;
+      }
+    }));
+    return;
+  }
+
   e.respondWith(caches.open(CACHE).then(async cache => {
-    const cached = await cache.match(key);
-    const net = fetch(req).then(res => {
-      if (res && res.ok && res.type === 'basic') cache.put(key, res.clone());
-      return res;
-    }).catch(() => null);
-    if (cached) { e.waitUntil(net); return cached; }
-    return (await net) || Response.error();
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    const res = await fetch(req);
+    if (res && res.ok && res.type === 'basic') cache.put(req, res.clone());
+    return res;
   }));
 });
