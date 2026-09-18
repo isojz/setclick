@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SetClick">
+<meta name="description" content="セトリごとに曲のテンポを保存して、タップ一発で鳴らせるメトロノーム">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<title>SetClick</title>
+<style>
+:root{
+  --bg:#0b0c10;
+  --surface:#14161c;
+  --surface-2:#1b1e26;
+  --surface-3:#262a34;
+  --line:#2a2e39;
+  --text:#f3f4f6;
+  --muted:#9aa0ad;
+  --dim:#666c7a;
+  --accent:#ff6b3d;
+  --accent-ink:#1a0b05;
+  --accent-soft:rgba(255,107,61,.13);
+  --warn:#ffb13d;
+  --danger:#ff5a5f;
+  --r-lg:18px;--r-md:12px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --col:640px;
+  --dock-h:0px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{margin:0;min-height:100dvh;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;
+  font-size:15px;line-height:1.5;overscroll-behavior-y:none;-webkit-font-smoothing:antialiased}
+body.sheet-open{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button:disabled{opacity:.3;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+svg{display:block;flex-shrink:0}
+[hidden]{display:none!important}
+
+/* ---------- ヘッダ ---------- */
+.top{position:sticky;top:0;z-index:20;background:rgba(11,12,16,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:calc(var(--safe-t) + 10px) 0 10px;border-bottom:1px solid var(--line)}
+.top-inner,.chips{max-width:var(--col);margin:0 auto}
+.top-inner{display:flex;align-items:center;gap:8px;padding:0 16px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.02em;flex:1;min-width:0}
+.pill-btn{height:40px;padding:0 14px;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--muted);flex-shrink:0}
+.pill-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.icon-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:var(--r-md);color:var(--muted);background:var(--surface);border:1px solid var(--line);flex-shrink:0}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 16px 0;scroll-padding:0 16px}
+.chips::-webkit-scrollbar{display:none}
+.chip-tab{flex-shrink:0;height:36px;padding:0 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--muted);
+  white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.chip-tab .n{font-size:11px;opacity:.6;font-weight:600}
+.chip-tab[aria-selected="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.chip-tab.add{border-style:dashed;color:var(--dim)}
+.chip-sep{flex-shrink:0;width:1px;background:var(--line);margin:6px 2px}
+
+/* ---------- 本文 ---------- */
+main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 24px)}
+body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
+.sl-head{margin:2px 2px 12px}
+.sl-title-row{display:flex;align-items:baseline;gap:10px}
+.sl-title{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl-meta{font-size:12px;color:var(--dim);font-weight:700;flex-shrink:0}
+.sl-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.sl-tools button{padding:10px 4px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);font-size:12px;font-weight:700}
+.sl-tools .del{color:var(--danger)}
+.songs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.song{display:flex;align-items:stretch;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;
+  transition:border-color .15s,background-color .15s;scroll-margin-top:150px;scroll-margin-bottom:calc(var(--dock-h) + 12px)}
+.song-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 16px 12px 12px;text-align:left;min-height:74px}
+.song-main:active{background:var(--surface-2)}
+.song-no{width:24px;flex-shrink:0;font-size:13px;color:var(--dim);font-weight:800;text-align:center}
+.song-body{flex:1;min-width:0}
+.song-title{display:block;font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.song-meta{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:12px;color:var(--muted);min-width:0}
+.chip{flex-shrink:0;padding:1px 7px;border-radius:999px;background:var(--surface-3);color:var(--muted);font-size:11px;font-weight:700}
+.song-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.song-bpm{flex-shrink:0;text-align:right;font-weight:800;font-size:30px;line-height:1;letter-spacing:-.02em}
+.song-bpm small{display:block;font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.1em;margin-top:4px}
+.song.cued{border-color:#3a3f4c}
+.song.playing{border-color:var(--accent);background:linear-gradient(90deg,var(--accent-soft),transparent 75%),var(--surface)}
+.song.playing .song-no,.song.playing .song-bpm{color:var(--accent)}
+.songs.editing .song{border-style:dashed}
+.edit-mark{color:var(--dim)}
+.song-tools{display:flex;align-items:center;padding-right:6px}
+.song-tools button{width:40px;height:48px;display:grid;place-items:center;color:var(--muted);border-radius:10px}
+.song-tools button:active{background:var(--surface-3)}
+.add-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+.add-btn{padding:16px;border:1.5px dashed var(--line);border-radius:var(--r-lg);color:var(--muted);font-weight:700}
+.add-btn.sub{padding:16px 18px;font-size:13px}
+.add-btn:active{background:var(--surface)}
+.empty{text-align:center;padding:30px 16px 16px}
+.empty-title{margin:0;font-weight:800;font-size:17px}
+.hint{font-size:12px;color:var(--dim);margin:4px 0 0;line-height:1.6}
+.center{text-align:center}
+.kbd-only{display:none}
+@media (hover:hover) and (pointer:fine){.kbd-only{display:block}}
+
+/* ---------- ビート表示 ---------- */
+.beats{display:flex;gap:6px;height:8px}
+.beats span{flex:1;border-radius:99px;background:var(--surface-3);transform-origin:center}
+.beats span.grp{background:#353a46}
+.beats span.on{background:var(--text)}
+.beats span.acc.on{background:var(--accent)}
+.beats.big{height:16px;gap:8px;width:100%}
+
+/* ---------- ドック（プレイヤー） ---------- */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(20,22,28,.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-top:1px solid var(--line);padding:12px 16px calc(var(--safe-b) + 12px)}
+.dock-inner{max-width:var(--col);margin:0 auto}
+.dock-row{display:flex;align-items:center;gap:10px;margin-top:12px}
+.dock-info{flex:1;min-width:0}
+.dock-title{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-bpm{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.bpm-box{display:flex;flex-direction:column;align-items:center;min-width:76px}
+.bpm-box .val{font-size:40px;font-weight:800;line-height:1;letter-spacing:-.03em}
+.bpm-box .val.changed{color:var(--warn)}
+.bpm-box .unit{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.1em;margin-top:3px;height:18px;line-height:18px}
+.save-bpm{font-size:11px;font-weight:800;color:var(--warn);padding:0 9px;height:20px;border:1px solid var(--warn);border-radius:99px;margin-top:2px}
+.nudge{width:38px;height:38px;border-radius:11px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;font-weight:700;color:var(--muted)}
+.dock-controls{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;margin-top:12px}
+.ctl{height:56px;border-radius:15px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--text)}
+.ctl:active{background:var(--surface-3)}
+.ctl.play,.big-play{background:var(--accent);border:1px solid var(--accent);color:var(--accent-ink);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.ctl.play.stop,.big-play.stop{background:var(--text);border-color:var(--text);color:var(--bg)}
+
+#flash{position:fixed;inset:0;pointer-events:none;z-index:25;background:var(--accent);opacity:0}
+
+/* ---------- フリー / テンポ操作 ---------- */
+#freeView{display:flex;flex-direction:column;align-items:stretch;gap:16px}
+.free-now{font-size:12px;color:var(--muted);text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.tempo{display:flex;flex-direction:column;gap:14px}
+.big-num{width:100%;background:none;border:0;text-align:center;font-weight:800;font-size:clamp(84px,27vw,132px);line-height:1;letter-spacing:-.04em;color:var(--text);
+  font-variant-numeric:tabular-nums;padding:0;margin:0;-moz-appearance:textfield;appearance:textfield;border-radius:14px}
+.big-num::-webkit-outer-spin-button,.big-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.big-num:focus{outline:none;color:var(--accent);background:var(--surface)}
+.bpm-label{font-size:11px;letter-spacing:.12em;color:var(--dim);font-weight:800;margin-top:-16px;text-align:center}
+.stepper-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.step{height:48px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-weight:800;color:var(--muted)}
+.step:active{background:var(--surface-3)}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
+.tap-pad{width:100%;height:80px;border-radius:var(--r-lg);border:1.5px solid var(--line);background:var(--surface);font-weight:800;letter-spacing:.25em;color:var(--muted);font-size:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:border-color .12s,color .12s}
+.tap-pad .tap-hint{font-size:11px;letter-spacing:0;font-weight:600;color:var(--dim)}
+.tap-pad.hit{border-color:var(--accent);color:var(--accent)}
+.meters{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.meters button{height:40px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:800;color:var(--muted)}
+.meters button[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--bg)}
+.seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px;width:100%}
+.seg button{flex:1;min-width:0;padding:10px 2px;border-radius:9px;font-size:13px;font-weight:700;color:var(--dim);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface-3);color:var(--text)}
+.field{display:block;width:100%;min-width:0}
+.field-label{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+.field-label span{color:var(--dim);font-weight:600}
+.big-play{width:100%;height:64px;border-radius:var(--r-lg);font-size:17px}
+.ghost-btn{width:100%;padding:13px;border-radius:var(--r-md);border:1px solid var(--line);color:var(--text);font-weight:700;background:var(--surface-2);display:flex;align-items:center;justify-content:center;gap:8px}
+.ghost-btn:active{background:var(--surface-3)}
+.ghost-btn.on{border-color:var(--accent);color:var(--accent)}
+.danger-btn{width:100%;padding:13px;border-radius:var(--r-md);color:var(--danger);font-weight:700;border:1px solid rgba(255,90,95,.35)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ---------- シート / ダイアログ ---------- */
+.sheet-root{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);animation:fade .18s ease}
+.sheet{position:relative;width:100%;max-width:var(--col);max-height:calc(100dvh - var(--safe-t) - 16px);overflow:auto;overscroll-behavior:contain;
+  background:var(--surface);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;padding:6px 18px calc(var(--safe-b) + 22px);
+  animation:up .24s cubic-bezier(.2,.8,.2,1)}
+.sheet-grip{width:40px;height:5px;border-radius:9px;background:var(--surface-3);margin:4px auto 10px}
+.sheet-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:16px}
+.sheet-head h2{margin:0;font-size:16px;text-align:center}
+.sheet-head > :first-child{justify-self:start}
+.sheet-head > :last-child{justify-self:end}
+.text-btn{padding:8px 4px;border-radius:10px;font-weight:700;color:var(--muted)}
+.text-btn.primary{color:var(--accent)}
+.stack{display:flex;flex-direction:column;gap:20px}
+.input{width:100%;padding:12px 14px;border-radius:var(--r-md);background:var(--bg);border:1px solid var(--line);color:var(--text);font-size:16px}
+.input:focus{outline:none;border-color:var(--accent)}
+textarea.input{resize:vertical;line-height:1.6}
+.dlg-title{margin:6px 0 6px;font-size:17px}
+.dlg-msg{margin:0 0 14px;color:var(--muted);font-size:14px}
+.dlg .input{margin:6px 0 14px}
+.dlg-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.fill-btn{padding:13px;border-radius:var(--r-md);font-weight:800;background:var(--accent);color:var(--accent-ink)}
+.fill-btn.danger{background:var(--danger);color:#fff}
+.or{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px;font-weight:700}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.parse-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.parse-list li{display:flex;gap:10px;padding:8px 12px;border-radius:10px;background:var(--surface-2)}
+.parse-list .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.parse-list .m{color:var(--muted);flex-shrink:0}
+.parse-list .warn{color:var(--warn)}
+.slider-row{display:grid;grid-template-columns:64px 1fr 42px;align-items:center;gap:10px;font-size:13px;font-weight:700}
+.slider-row .v{text-align:right;color:var(--muted);font-size:12px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.toggle-row .t{font-weight:700;font-size:14px}
+.switch{width:50px;height:30px;border-radius:99px;background:var(--surface-3);position:relative;flex-shrink:0;transition:background .15s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(20px)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 12px);z-index:60;background:var(--text);color:var(--bg);
+  padding:11px 16px;border-radius:12px;font-size:13px;font-weight:700;display:flex;gap:14px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.45);
+  width:max-content;max-width:calc(100% - 32px)}
+body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
+.toast button{color:var(--accent);font-weight:800;flex-shrink:0}
+
+@keyframes up{from{transform:translateY(48px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.sheet,.sheet-backdrop{animation:none}}
+@media (min-width:720px){
+  .sheet-root{align-items:center}
+  .sheet{max-width:520px;border-radius:22px;border-bottom:1px solid var(--line);padding-bottom:22px}
+  .sheet-grip{display:none}
+  .sheet-head{margin-top:8px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <span class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 3h5.6l4.4 15.5H4.8z" fill="#ff6b3d"/><path d="M10.4 5.6h3.2l2 8H8.4z" fill="#0b0c10"/><path d="M12 16 16.4 4.6" stroke="#f3f4f6" stroke-width="1.8" stroke-linecap="round"/><rect x="3.8" y="18.5" width="16.4" height="2.4" rx="1" fill="#d64e26"/></svg>
+      <span>SetClick</span>
+    </span>
+    <button id="editBtn" class="pill-btn" aria-pressed="false">編集</button>
+    <button id="settingsBtn" class="icon-btn" aria-label="設定">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+    </button>
+  </div>
+  <nav id="chips" class="chips" role="tablist" aria-label="セトリ"></nav>
+</header>
+
+<main id="setlistView">
+  <div class="sl-head">
+    <div class="sl-title-row"><h1 id="slTitle" class="sl-title"></h1><span id="slMeta" class="sl-meta"></span></div>
+    <div id="slTools" class="sl-tools" hidden>
+      <button data-x="rename">名前変更</button><button data-x="dup">複製</button><button data-x="share">共有</button>
+      <button data-x="left" aria-label="セトリを左へ移動">◀ 左へ</button><button data-x="right" aria-label="セトリを右へ移動">右へ ▶</button><button data-x="del" class="del">セトリを削除</button>
+    </div>
+  </div>
+  <ol id="songList" class="songs"></ol>
+  <div id="emptyState" class="empty" hidden>
+    <p class="empty-title">まだ曲がありません</p>
+    <p class="hint">「＋ 曲を追加」で1曲ずつ、「まとめて追加」なら<br>「曲名 BPM」を1行ずつ書いて一気に登録できます</p>
+  </div>
+  <div class="add-row">
+    <button id="addSongBtn" class="add-btn">＋ 曲を追加</button>
+    <button id="bulkBtn" class="add-btn sub">まとめて追加</button>
+  </div>
+</main>
+
+<main id="freeView" hidden>
+  <div id="freeNow" class="free-now" hidden></div>
+  <div id="freeBeats" class="beats big"></div>
+  <div id="freeTempo"></div>
+  <button id="freePlay" class="big-play"></button>
+  <button id="freeAdd" class="ghost-btn">このテンポで今のセトリに追加</button>
+</main>
+
+<section id="dock" class="dock" aria-label="プレイヤー">
+  <div class="dock-inner">
+    <div id="dockBeats" class="beats"></div>
+    <div class="dock-row">
+      <div class="dock-info">
+        <div id="dockTitle" class="dock-title"></div>
+        <div id="dockSub" class="dock-sub"></div>
+      </div>
+      <div class="dock-bpm">
+        <button id="bpmMinus" class="nudge" aria-label="テンポを1下げる">−</button>
+        <div class="bpm-box">
+          <span id="dockBpm" class="val num"></span>
+          <span id="bpmUnit" class="unit">BPM</span>
+          <button id="saveBpm" class="save-bpm" hidden>保存</button>
+        </div>
+        <button id="bpmPlus" class="nudge" aria-label="テンポを1上げる">＋</button>
+      </div>
+    </div>
+    <div class="dock-controls">
+      <button id="prevBtn" class="ctl" aria-label="前の曲">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M5 5h2.2v14H5zM19.5 6.1v11.8a1 1 0 0 1-1.55.83L9.6 12.83a1 1 0 0 1 0-1.66l8.35-5.9a1 1 0 0 1 1.55.83z"/></svg>
+      </button>
+      <button id="playBtn" class="ctl play"></button>
+      <button id="nextBtn" class="ctl" aria-label="次の曲">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M16.8 5H19v14h-2.2zM4.5 6.1v11.8a1 1 0 0 0 1.55.83l8.35-5.9a1 1 0 0 0 0-1.66L6.05 5.27A1 1 0 0 0 4.5 6.1z"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div id="flash" aria-hidden="true"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+'use strict';
+const APP_VERSION = '1.1.0';
+const KEY = 'setclick:v1';
+const BPM_MIN = 20, BPM_MAX = 300;
+const DEBUG = /[?&]debug\b/.test(location.search);
+
+// 拍子。x/8 のうち 3 の倍数（6/8・9/8・12/8）は付点4分を1拍として数える
+const METERS = ['2/4', '3/4', '4/4', '5/4', '6/4', '7/4', '5/8', '6/8', '7/8', '9/8', '12/8'];
+// 裏（1拍の分割）。[キー, 表示名, 1拍あたりの発音数]
+const SUB_OPTIONS = {
+  simple: [['none', 'なし', 1], ['8th', '8分裏', 2], ['triplet', '3連', 3], ['16th', '16分', 4]],
+  compound: [['none', 'なし', 1], ['8th', '8分', 3], ['16th', '16分', 6]],
+  odd8: [['none', 'なし', 1], ['16th', '16分', 2]],
+};
+const UNIT_LABEL = { simple: '4分音符 = BPM', compound: '付点4分 = BPM', odd8: '8分音符 = BPM' };
+const SUB_KEYS = ['none', '8th', 'triplet', '16th'];
+const SOUNDS = [{ v: 'click', label: 'クリック' }, { v: 'wood', label: 'ウッド' }, { v: 'hat', label: 'ハイハット' }];
+const COUNT_MODES = [{ v: 0, label: '鳴らし続ける' }, { v: 1, label: '1小節で停止' }, { v: 2, label: '2小節で停止' }];
+const MIX = [{ k: 'accent', label: '1拍目' }, { k: 'beat', label: '表拍' }, { k: 'sub', label: '裏拍' }];
+
+const ICON = {
+  play: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.6v14.8a1 1 0 0 0 1.53.85l11.8-7.4a1 1 0 0 0 0-1.7L8.53 3.75A1 1 0 0 0 7 4.6z"/></svg>',
+  stop: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="4.5" y="4.5" width="15" height="15" rx="2.5"/></svg>',
+  up: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>',
+  down: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+  note: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v11.3A3.5 3.5 0 1 0 16 17.5V7h4V3z"/></svg>',
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const clampBpm = v => clamp(Math.round(Number(v) || 0), BPM_MIN, BPM_MAX);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/* ================= 拍子 ================= */
+function meterInfo(ts) {
+  const [n, d] = String(ts).split('/').map(Number);
+  if (d === 8 && n % 3 === 0) return { n, d, kind: 'compound', pulses: n / 3, dpb: 3 };
+  if (d === 8) return { n, d, kind: 'odd8', pulses: n, dpb: 1 };
+  return { n, d, kind: 'simple', pulses: n, dpb: 1 };
+}
+const subOpt = (ts, sub) => SUB_OPTIONS[meterInfo(ts).kind].find(o => o[0] === sub);
+function normalizeSub(ts, sub) {
+  if (subOpt(ts, sub)) return sub;
+  return meterInfo(ts).kind === 'compound' && sub === 'triplet' ? '8th' : 'none';
+}
+const defaultSub = ts => (meterInfo(ts).kind === 'compound' ? '8th' : 'none');
+const subLabel = (ts, sub) => (sub === 'none' ? '' : subOpt(ts, sub)?.[1] || '');
+const meterText = m => m.ts + (m.sub !== 'none' ? '・' + subLabel(m.ts, m.sub) : '');
+// 曲の設定 → 発音エンジン用のパラメータ（拍数・1拍の発音数・表示ドットの束ね方）
+function toEngine(m) {
+  const mi = meterInfo(m.ts);
+  return { bpm: m.bpm, beats: mi.pulses, sub: subOpt(m.ts, m.sub)?.[2] || 1, dpb: mi.dpb, ts: m.ts, subKey: m.sub };
+}
+
+/* ================= データ ================= */
+function fixMeter(o) {
+  let ts = typeof o.ts === 'string' && METERS.includes(o.ts) ? o.ts : null;
+  if (!ts) { const b = Math.round(Number(o.beats)); ts = METERS.includes(`${b}/4`) ? `${b}/4` : '4/4'; }
+  let sub = SUB_KEYS.includes(o.sub) ? o.sub : ({ 1: 'none', 2: '8th', 3: 'triplet', 4: '16th' }[Number(o.sub)] || 'none');
+  return { ts, sub: normalizeSub(ts, sub) };
+}
+function sanitizeSong(o) {
+  if (!o || typeof o !== 'object') return null;
+  const bpm = Number(o.bpm);
+  if (!Number.isFinite(bpm)) return null;
+  return {
+    id: typeof o.id === 'string' && o.id ? o.id : uid(),
+    title: String(o.title ?? '').trim().slice(0, 80) || '無題',
+    bpm: clampBpm(bpm),
+    ...fixMeter(o),
+    note: String(o.note ?? '').trim().slice(0, 140),
+  };
+}
+function sanitizeSetlist(o) {
+  if (!o || typeof o !== 'object' || !Array.isArray(o.songs)) return null;
+  return {
+    id: typeof o.id === 'string' && o.id ? o.id : uid(),
+    name: String(o.name ?? '').trim().slice(0, 60) || '無題のセトリ',
+    songs: o.songs.map(sanitizeSong).filter(Boolean).slice(0, 300),
+  };
+}
+const defaultSettings = () => ({ sound: 'click', volume: 0.9, mix: { accent: 1, beat: 1, sub: 0.8 }, accent: true, countBars: 0, flash: false });
+function defaultState() {
+  const sl = { id: uid(), name: 'サンプル', songs: [
+    { id: uid(), title: 'アップテンポの曲', bpm: 180, ts: '4/4', sub: 'none', note: 'タップで再生／もう一度タップで停止' },
+    { id: uid(), title: 'ミドルテンポの曲', bpm: 120, ts: '4/4', sub: '8th', note: '8分の裏も鳴らす設定' },
+    { id: uid(), title: 'ワルツ', bpm: 150, ts: '3/4', sub: 'none', note: '' },
+    { id: uid(), title: 'バラード', bpm: 58, ts: '6/8', sub: '8th', note: '付点4分で数えて8分で刻む' },
+  ] };
+  return { v: 1, setlists: [sl], currentId: sl.id, free: { bpm: 120, ts: '4/4', sub: 'none' }, settings: defaultSettings() };
+}
+function load() {
+  let d = null;
+  try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch {}
+  if (!d || !Array.isArray(d.setlists)) return defaultState();
+  const setlists = d.setlists.map(sanitizeSetlist).filter(Boolean);
+  const st = {
+    v: 1,
+    setlists: setlists.length ? setlists : [{ id: uid(), name: 'セトリ1', songs: [] }],
+    currentId: d.currentId,
+    free: { bpm: clampBpm(d.free?.bpm ?? 120), ...fixMeter(d.free || {}) },
+    settings: { ...defaultSettings(), ...(d.settings && typeof d.settings === 'object' ? d.settings : {}) },
+  };
+  if (!st.setlists.some(s => s.id === st.currentId)) st.currentId = st.setlists[0].id;
+  const s = st.settings;
+  const num01 = (v, dflt) => clamp(Number.isFinite(Number(v)) ? Number(v) : dflt, 0, 1);
+  if (!SOUNDS.some(x => x.v === s.sound)) s.sound = 'click';
+  s.volume = num01(s.volume, 0.9);
+  const m = s.mix && typeof s.mix === 'object' ? s.mix : {};
+  s.mix = { accent: num01(m.accent, 1), beat: num01(m.beat, 1), sub: num01(m.sub, 0.8) };
+  s.accent = s.accent !== false;
+  s.flash = s.flash === true;
+  if (![0, 1, 2].includes(s.countBars)) s.countBars = 0;
+  return st;
+}
+let S = load();
+let saveWarned = false;
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch { if (!saveWarned) { saveWarned = true; toast('この端末に保存できませんでした（プライベートモード？）'); } }
+}
+const cur = () => S.setlists.find(s => s.id === S.currentId) || S.setlists[0];
+const findSong = (setlistId, songId) => S.setlists.find(s => s.id === setlistId)?.songs.find(x => x.id === songId) || null;
+function uniqueName(name) {
+  if (!S.setlists.some(s => s.name === name)) return name;
+  for (let i = 2; ; i++) { const n = `${name} (${i})`; if (!S.setlists.some(s => s.name === n)) return n; }
+}
+function nextSetlistName() {
+  for (let i = S.setlists.length + 1; ; i++) { const n = `セトリ${i}`; if (!S.setlists.some(s => s.name === n)) return n; }
+}
+
+/* ================= 音 ================= */
+// Web Audio の先読みスケジューラ。25ms ごとに「120ms 先まで」の発音を AudioContext の時計で予約する。
+// setTimeout で直接鳴らすとメインスレッドの負荷でテンポが揺れるため、この方式にしている。
+const Engine = (() => {
+  let ctx = null, master = null, gains = null, worker = null, bufs = null, keepAlive = null, fallbackTimer = 0, analyser = null;
+  let src = null;          // { kind: 'song'|'free'|'preview', setlistId, songId, title, baseBpm, bpm, beats, sub, dpb, ts, subKey }
+  let active = false;      // 再生中（UI 上）
+  let scheduling = false;  // まだ先のノートを予約するか
+  let anchorTime = 0, anchorIdx = 0, idx = 0, stopIdx = Infinity, endTimer = 0;
+  let scheduled = [];
+  const queue = [];        // 画面表示用（発音時刻つき）
+  const log = [];          // ?debug のときだけ使う
+  const LOOKAHEAD = 0.12;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(f => f());
+
+  function makeBuffers() {
+    const sr = ctx.sampleRate, TAU = Math.PI * 2;
+    const make = (dur, fn) => {
+      const n = Math.max(1, Math.floor(sr * dur));
+      const b = ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = fn(i / sr) * Math.min(1, i / 24);
+      return b;
+    };
+    const beep = (f, a, tau) => t => a * Math.sin(TAU * f * t) * Math.exp(-t / tau);
+    const wood = (f, a, tau) => t => a * (0.75 * Math.sin(TAU * f * t) + 0.25 * Math.sin(TAU * f * 2.71 * t)) * Math.exp(-t / tau);
+    const noise = (a, tau) => { let prev = 0; return t => { const w = Math.random() * 2 - 1; const hp = (w - prev) * 0.5; prev = w; return a * hp * Math.exp(-t / tau); }; };
+    const mix = (...fs) => t => fs.reduce((s, f) => s + f(t), 0);
+    return {
+      click: { accent: make(0.09, beep(1760, 0.95, 0.02)), beat: make(0.08, beep(1175, 0.8, 0.018)), sub: make(0.06, beep(880, 0.55, 0.012)) },
+      wood: { accent: make(0.12, wood(1250, 0.95, 0.026)), beat: make(0.1, wood(880, 0.85, 0.022)), sub: make(0.08, wood(700, 0.55, 0.016)) },
+      hat: { accent: make(0.12, mix(noise(0.7, 0.035), beep(1600, 0.3, 0.02))), beat: make(0.08, noise(0.85, 0.025)), sub: make(0.06, noise(0.55, 0.014)) },
+    };
+  }
+  const volGain = () => Math.pow(S.settings.volume, 1.3);
+  function init() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    try { ctx = new AC({ latencyHint: 'interactive' }); } catch { ctx = new AC(); }
+    master = ctx.createGain();
+    master.gain.value = volGain();
+    master.connect(ctx.destination);
+    if (DEBUG) { analyser = ctx.createAnalyser(); analyser.fftSize = 2048; master.connect(analyser); }
+    // 1拍目・表拍・裏拍を別々のつまみで調整できるよう、系統ごとにゲインを分ける
+    gains = {};
+    for (const { k } of MIX) { gains[k] = ctx.createGain(); gains[k].gain.value = S.settings.mix[k]; gains[k].connect(master); }
+    bufs = makeBuffers();
+    // タイマーは Worker に置く（メインスレッドが重くても tick が遅れにくい）
+    try {
+      const code = "let t=null;onmessage=e=>{clearInterval(t);t=null;if(e.data==='start')t=setInterval(()=>postMessage(0),25)}";
+      worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+      worker.onmessage = tick;
+    } catch { worker = null; }
+  }
+  function timerStart() { if (worker) worker.postMessage('start'); else { clearInterval(fallbackTimer); fallbackTimer = setInterval(tick, 25); } }
+  function timerStop() { if (worker) worker.postMessage('stop'); clearInterval(fallbackTimer); }
+  function silentWavUrl() {
+    const sr = 8000, n = 2000, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    w(36, 'data'); v.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  // ユーザー操作の中で呼ぶ（ブラウザの自動再生制限の解除）
+  function unlock() {
+    if (!ctx) init();
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch {}
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    const n = ctx.createBufferSource();
+    n.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    n.connect(ctx.destination); n.start(0);
+    // 古い iOS はマナーモード中に Web Audio が鳴らないので、無音の audio 要素を流して回避
+    if (isIOS && !('audioSession' in navigator)) {
+      if (!keepAlive) { keepAlive = new Audio(silentWavUrl()); keepAlive.loop = true; }
+      keepAlive.play().catch(() => {});
+    }
+  }
+  const interval = () => 60 / src.bpm / src.sub;
+  function tick() {
+    if (!scheduling || !ctx) return;
+    const horizon = ctx.currentTime + LOOKAHEAD;
+    const iv = interval();
+    for (;;) {
+      const t = anchorTime + (idx - anchorIdx) * iv;
+      if (t > horizon) break;
+      if (idx >= stopIdx) {
+        scheduling = false; timerStop();
+        endTimer = setTimeout(finish, Math.max(0, (t - ctx.currentTime) * 1000));
+        break;
+      }
+      if (t >= ctx.currentTime - 0.02) scheduleNote(idx, t); // 復帰直後などで過ぎた分はまとめて鳴らさない
+      idx++;
+    }
+    if (scheduled.length > 48) { const now = ctx.currentTime; scheduled = scheduled.filter(s => s.time > now - 0.2); }
+  }
+  function scheduleNote(i, t) {
+    const perBar = src.beats * src.sub;
+    const inBar = i % perBar;
+    const beat = Math.floor(inBar / src.sub);
+    const subPos = inBar % src.sub;
+    const dpb = src.dpb || 1;
+    const kind = subPos ? 'sub' : (beat === 0 && S.settings.accent && src.beats > 1 ? 'accent' : 'beat');
+    const n = ctx.createBufferSource();
+    n.buffer = bufs[S.settings.sound][kind];
+    n.connect(gains[kind]);
+    n.start(t);
+    scheduled.push({ n, time: t });
+    // 表示用：6/8 などは8分ごとにドットを進める
+    queue.push({ time: t, kind, onDot: (subPos * dpb) % src.sub === 0, dot: beat * dpb + Math.floor(subPos * dpb / src.sub) });
+    if (queue.length > 128) queue.splice(0, queue.length - 128);
+    if (DEBUG) { log.push({ t, kind, bpm: src.bpm }); if (log.length > 500) log.shift(); }
+  }
+  function cancelScheduled() {
+    const now = ctx ? ctx.currentTime : 0;
+    for (const s of scheduled) if (s.time > now) { try { s.n.stop(); } catch {} }
+    scheduled = [];
+    queue.length = 0;
+  }
+  function finish() {
+    endTimer = 0; active = false; scheduling = false;
+    timerStop();
+    if (keepAlive) keepAlive.pause();
+    wake(false);
+    emit();
+  }
+  function start(next) {
+    unlock();
+    cancelScheduled();
+    clearTimeout(endTimer); endTimer = 0;
+    src = { ...next };
+    active = true; scheduling = true;
+    idx = 0; anchorIdx = 0;
+    anchorTime = ctx.currentTime + 0.06;
+    const bars = S.settings.countBars;
+    stopIdx = bars && src.kind === 'song' ? bars * src.beats * src.sub : Infinity;
+    timerStart(); tick();
+    wake(true);
+    emit();
+  }
+  function stop() {
+    if (!active) return;
+    clearTimeout(endTimer); endTimer = 0;
+    active = false; scheduling = false;
+    timerStop(); cancelScheduled();
+    if (keepAlive) keepAlive.pause();
+    wake(false);
+    emit();
+  }
+  // 再生中のテンポ変更：次に鳴る予定の拍の時刻を起点に組み直す（位相を保ったまま滑らかに変わる）
+  function setBpm(b) {
+    if (!src) return;
+    b = clampBpm(b);
+    if (b === src.bpm) return;
+    if (active && scheduling && ctx) {
+      const tNext = anchorTime + (idx - anchorIdx) * interval();
+      src.bpm = b; anchorTime = tNext; anchorIdx = idx;
+    } else src.bpm = b;
+    emit();
+  }
+  function setVolume() {
+    if (!ctx) return;
+    master.gain.setTargetAtTime(volGain(), ctx.currentTime, 0.01);
+    for (const { k } of MIX) gains[k].gain.setTargetAtTime(S.settings.mix[k], ctx.currentTime, 0.01);
+  }
+  function blip(kind = 'accent') {
+    unlock();
+    const n = ctx.createBufferSource();
+    n.buffer = bufs[S.settings.sound][kind];
+    n.connect(gains[kind]); n.start(ctx.currentTime + 0.02);
+  }
+  // 画面表示用：出力遅延ぶん遅らせて、実際に音が出た拍を取り出す
+  function pull() {
+    if (!ctx || !queue.length) return null;
+    const now = ctx.currentTime - (ctx.outputLatency || 0) - (ctx.baseLatency || 0);
+    let hit = null;
+    while (queue.length && queue[0].time <= now) { const q = queue.shift(); if (q.onDot) hit = q; }
+    return hit;
+  }
+  function resumeIfNeeded() { if (ctx && active && ctx.state !== 'running') ctx.resume().catch(() => {}); }
+  return {
+    start, stop, setBpm, setVolume, blip, pull, resumeIfNeeded,
+    on: f => { listeners.add(f); return () => listeners.delete(f); },
+    get src() { return src; },
+    get active() { return active; },
+    get state() { return ctx ? ctx.state : 'none'; },
+    get log() { return log; },
+    // ?debug 専用：出力のピーク値（音が実際に出ているかの検証用）
+    peak() { if (!analyser) return null; const a = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(a); return a.reduce((m, v) => Math.max(m, Math.abs(v)), 0); },
+  };
+})();
+
+let wakeSentinel = null;
+async function wake(on) {
+  try {
+    if (on) {
+      if (wakeSentinel || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+      const s = await navigator.wakeLock.request('screen');
+      if (!Engine.active) { s.release(); return; }
+      wakeSentinel = s;
+      s.addEventListener('release', () => { if (wakeSentinel === s) wakeSentinel = null; });
+    } else if (wakeSentinel) {
+      const s = wakeSentinel; wakeSentinel = null; await s.release();
+    }
+  } catch { /* 省電力モード等で拒否されても再生は続ける */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Engine.active) { Engine.resumeIfNeeded(); wake(true); }
+});
+
+/* ================= 画面 ================= */
+const ui = { view: 'setlist', edit: false, cuedId: null };
+let freeTempo = null;
+
+const meterChips = s => `<span class="chip">${s.ts}</span>${s.sub !== 'none' ? `<span class="chip">${subLabel(s.ts, s.sub)}</span>` : ''}`;
+const playingSongId = () => (Engine.active && Engine.src?.kind === 'song' ? Engine.src.songId : null);
+
+function render() {
+  const sl = cur();
+  if (!sl.songs.some(s => s.id === ui.cuedId)) ui.cuedId = sl.songs[0]?.id ?? null;
+  const editBtn = $('#editBtn');
+  editBtn.textContent = ui.edit ? '完了' : '編集';
+  editBtn.setAttribute('aria-pressed', String(ui.edit));
+  editBtn.hidden = ui.view !== 'setlist';
+  $('#setlistView').hidden = ui.view !== 'setlist';
+  $('#freeView').hidden = ui.view !== 'free';
+  $('#dock').hidden = ui.view !== 'setlist';
+  document.body.classList.toggle('no-dock', ui.view !== 'setlist');
+  $('#slTitle').textContent = sl.name;
+  $('#slMeta').textContent = `${sl.songs.length}曲`;
+  $('#slTools').hidden = !ui.edit;
+  $('#slTools [data-x="left"]').disabled = S.setlists.indexOf(sl) === 0;
+  $('#slTools [data-x="right"]').disabled = S.setlists.indexOf(sl) === S.setlists.length - 1;
+  renderChips();
+  renderList();
+  renderDock();
+  renderFree();
+  measureDock();
+}
+
+function renderChips() {
+  const nav = $('#chips');
+  nav.innerHTML =
+    `<button class="chip-tab" role="tab" data-view="free" aria-selected="${ui.view === 'free'}">${ICON.note}フリー</button><span class="chip-sep"></span>` +
+    S.setlists.map(sl => `<button class="chip-tab" role="tab" data-sl="${sl.id}" aria-selected="${ui.view === 'setlist' && sl.id === S.currentId}">${esc(sl.name)}<span class="n">${sl.songs.length}</span></button>`).join('') +
+    '<button class="chip-tab add" data-x="new" aria-label="新しいセトリ">＋ セトリ</button>';
+  const sel = nav.querySelector('[aria-selected="true"]');
+  if (sel) nav.scrollLeft = Math.max(0, sel.offsetLeft - nav.clientWidth / 2 + sel.offsetWidth / 2);
+}
+
+function renderList() {
+  const sl = cur(), pid = playingSongId();
+  const list = $('#songList');
+  list.classList.toggle('editing', ui.edit);
+  list.innerHTML = sl.songs.map((s, i) => `
+    <li class="song${s.id === pid ? ' playing' : ''}${!pid && s.id === ui.cuedId ? ' cued' : ''}" data-id="${s.id}">
+      <button class="song-main" data-act="${ui.edit ? 'edit' : 'toggle'}" aria-label="${esc(s.title)} ${s.bpm} BPM${ui.edit ? ' を編集' : ''}">
+        <span class="song-no num">${i + 1}</span>
+        <span class="song-body">
+          <span class="song-title">${esc(s.title)}</span>
+          <span class="song-meta">${meterChips(s)}${s.note ? `<span class="song-note">${esc(s.note)}</span>` : ''}</span>
+        </span>
+        ${ui.edit ? `<span class="edit-mark">${ICON.edit}</span>` : ''}
+        <span class="song-bpm num">${s.bpm}<small>BPM</small></span>
+      </button>
+      ${ui.edit ? `<span class="song-tools">
+        <button data-act="up" aria-label="上へ移動" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
+        <button data-act="down" aria-label="下へ移動" ${i === sl.songs.length - 1 ? 'disabled' : ''}>${ICON.down}</button>
+      </span>` : ''}
+    </li>`).join('');
+  $('#emptyState').hidden = sl.songs.length > 0;
+}
+
+function updateMarks() {
+  const pid = playingSongId();
+  $$('#songList li').forEach(li => {
+    li.classList.toggle('playing', li.dataset.id === pid);
+    li.classList.toggle('cued', !pid && li.dataset.id === ui.cuedId);
+  });
+}
+
+// p = toEngine() の戻り値。拍（6/8 なら8分）ごとのドットを並べる
+function ensureDots(el, p) {
+  const count = p.beats * p.dpb;
+  const accent = S.settings.accent && p.beats > 1;
+  const key = `${p.beats}:${p.dpb}:${accent}`;
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  el.innerHTML = Array.from({ length: count }, (_, i) =>
+    `<span class="${i === 0 && accent ? 'acc' : (p.dpb > 1 && i % p.dpb === 0 ? 'grp' : '')}"></span>`).join('');
+}
+function clearDots() { $$('.beats span.on').forEach(d => d.classList.remove('on')); }
+
+// ドックの基準曲（再生中の曲がこのセトリにあればそれ、なければ選択中の曲）
+function baseIndex() {
+  const sl = cur(), src = Engine.src;
+  const id = Engine.active && src?.kind === 'song' && src.setlistId === sl.id ? src.songId : ui.cuedId;
+  return sl.songs.findIndex(s => s.id === id);
+}
+
+function renderDock() {
+  const sl = cur(), src = Engine.src;
+  const live = Engine.active && src && src.kind !== 'preview';
+  let title, p, base = null, kind = 'song';
+  if (live) {
+    p = src; kind = src.kind;
+    title = kind === 'free' ? 'フリー' : src.title;
+    if (kind === 'song') base = src.baseBpm;
+  } else {
+    const s = sl.songs.find(x => x.id === ui.cuedId);
+    if (s) { title = s.title; p = toEngine(s); }
+    else { title = '曲を追加してください'; p = toEngine({ bpm: null, ts: '4/4', sub: 'none' }); }
+  }
+  const i = baseIndex();
+  const next = i >= 0 ? sl.songs[i + 1] : null;
+  const parts = [meterText({ ts: p.ts, sub: p.subKey })];
+  if (S.settings.countBars && kind === 'song') parts.push(COUNT_MODES[S.settings.countBars].label);
+  if (kind === 'song' && next) parts.push(`次: ${next.title}`);
+  else if (kind === 'song' && i >= 0 && i === sl.songs.length - 1) parts.push('最後の曲');
+  $('#dockTitle').textContent = title;
+  $('#dockSub').textContent = parts.join('　');
+  const changed = base != null && p.bpm !== base;
+  const val = $('#dockBpm');
+  val.textContent = p.bpm ?? '—';
+  val.classList.toggle('changed', changed);
+  $('#saveBpm').hidden = !changed;
+  $('#bpmUnit').hidden = changed;
+  $('#bpmMinus').disabled = $('#bpmPlus').disabled = !live;
+  const play = $('#playBtn');
+  play.classList.toggle('stop', !!live);
+  play.innerHTML = live ? `${ICON.stop}<span>停止</span>` : `${ICON.play}<span>再生</span>`;
+  play.setAttribute('aria-label', live ? '停止' : '再生');
+  play.disabled = !live && !sl.songs.length;
+  $('#prevBtn').disabled = !(i > 0);
+  $('#nextBtn').disabled = !(i >= 0 && i < sl.songs.length - 1);
+  ensureDots($('#dockBeats'), p);
+}
+
+function renderFree() {
+  if (!freeTempo) return;
+  freeTempo.sync();
+  const src = Engine.src, active = Engine.active;
+  const live = active && src?.kind !== 'preview';
+  const btn = $('#freePlay');
+  btn.classList.toggle('stop', !!live);
+  btn.innerHTML = live ? `${ICON.stop}<span>停止</span>` : `${ICON.play}<span>スタート</span>`;
+  const now = $('#freeNow');
+  now.hidden = !(active && src?.kind === 'song');
+  if (!now.hidden) now.textContent = `再生中: ${src.title}（${src.bpm} BPM）`;
+  ensureDots($('#freeBeats'), active && src?.kind === 'free' ? src : toEngine(S.free));
+}
+
+function measureDock() {
+  const d = $('#dock');
+  document.documentElement.style.setProperty('--dock-h', d.hidden ? '0px' : d.offsetHeight + 'px');
+}
+
+/* ================= 再生操作 ================= */
+function playSong(song, setlistId = cur().id) {
+  ui.cuedId = song.id;
+  Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, baseBpm: song.bpm, ...toEngine(song) });
+}
+function toggleSong(song) {
+  if (playingSongId() === song.id) Engine.stop();
+  else playSong(song);
+}
+function dockPlay() {
+  if (Engine.active && Engine.src?.kind !== 'preview') { Engine.stop(); return; }
+  const sl = cur();
+  const s = sl.songs.find(x => x.id === ui.cuedId) || sl.songs[0];
+  if (s) playSong(s);
+}
+function step(d) {
+  const sl = cur();
+  if (!sl.songs.length) return;
+  const i = baseIndex();
+  const j = clamp(i < 0 ? 0 : i + d, 0, sl.songs.length - 1);
+  if (i >= 0 && i === j) return;
+  const song = sl.songs[j];
+  if (Engine.active && Engine.src?.kind === 'song') playSong(song);
+  else { ui.cuedId = song.id; renderDock(); updateMarks(); }
+  scrollToSong(song.id);
+}
+function scrollToSong(id) {
+  const li = $(`#songList li[data-id="${id}"]`);
+  if (li) li.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+function nudge(d) {
+  if (ui.view === 'free') { freeTempo?.setBpm(S.free.bpm + d); return; }
+  if (Engine.active && Engine.src && Engine.src.kind !== 'preview') Engine.setBpm(Engine.src.bpm + d);
+}
+function saveNudge() {
+  const src = Engine.src;
+  if (!src || src.kind !== 'song') return;
+  const song = findSong(src.setlistId, src.songId);
+  if (!song) return;
+  song.bpm = src.bpm;
+  src.baseBpm = src.bpm;
+  save(); renderList(); renderDock();
+  toast(`「${song.title}」を ${song.bpm} BPM で保存しました`);
+}
+function freeToggle() {
+  freeTempo?.flush();
+  if (Engine.active && Engine.src?.kind !== 'preview') { Engine.stop(); return; }
+  Engine.start({ kind: 'free', title: 'フリー', ...toEngine(S.free) });
+}
+function showSetlist(id) {
+  if (ui.view === 'setlist' && S.currentId === id) return;
+  S.currentId = id; ui.view = 'setlist'; ui.edit = false; ui.cuedId = null;
+  save(); render(); window.scrollTo({ top: 0 });
+}
+
+/* ================= 描画ループ（拍の表示） ================= */
+let rafOn = false;
+const flashEl = $('#flash');
+function ensureRaf() { if (!rafOn) { rafOn = true; requestAnimationFrame(frame); } }
+function frame() {
+  const n = Engine.pull();
+  if (n) onBeat(n);
+  if (Engine.active) requestAnimationFrame(frame);
+  else { rafOn = false; clearDots(); }
+}
+function onBeat(n) {
+  const el = ui.view === 'free' ? $('#freeBeats') : $('#dockBeats');
+  const dots = el.children;
+  for (let i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === n.dot);
+  const dot = dots[n.dot];
+  if (dot && dot.animate) dot.animate([{ transform: 'scaleY(2)' }, { transform: 'scaleY(1)' }], { duration: 150, easing: 'ease-out' });
+  if (S.settings.flash && n.kind !== 'sub' && flashEl.animate) {
+    flashEl.animate([{ opacity: n.kind === 'accent' ? 0.55 : 0.2 }, { opacity: 0 }], { duration: 170, easing: 'ease-out' });
+  }
+}
+Engine.on(() => {
+  renderDock(); updateMarks(); renderFree();
+  if (Engine.active) ensureRaf();
+});
+
+/* ================= 小物 ================= */
+function holdRepeat(btn, fn) {
+  let t1 = 0, t2 = 0;
+  const stop = () => { clearTimeout(t1); clearInterval(t2); t1 = t2 = 0; };
+  btn.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || btn.disabled) return;
+    e.preventDefault(); stop(); fn();
+    t1 = setTimeout(() => { t2 = setInterval(() => { if (btn.disabled) stop(); else fn(); }, 70); }, 420);
+    try { btn.setPointerCapture(e.pointerId); } catch {}
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => btn.addEventListener(ev, stop));
+  btn.addEventListener('click', e => { if (e.detail === 0) fn(); }); // キーボード操作
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+}
+function makeTapper(onBpm) {
+  let taps = [];
+  return () => {
+    const now = performance.now();
+    if (taps.length && now - taps[taps.length - 1] > 2200) taps = [];
+    taps.push(now);
+    if (taps.length > 8) taps.shift();
+    if (taps.length >= 2) onBpm(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
+  };
+}
+
+function tempoHTML() {
+  return `
+  <div class="tempo">
+    <input class="big-num" data-t="bpm" type="number" inputmode="numeric" min="${BPM_MIN}" max="${BPM_MAX}" aria-label="BPM（タップで直接入力）">
+    <div class="bpm-label" data-t="unit"></div>
+    <div class="stepper-row">${[-5, -1, 1, 5].map(d => `<button type="button" class="step num" data-t="step" data-d="${d}">${d > 0 ? '+' : '−'}${Math.abs(d)}</button>`).join('')}</div>
+    <input type="range" data-t="range" min="${BPM_MIN}" max="${BPM_MAX}" step="1" aria-label="BPM スライダー">
+    <button type="button" class="tap-pad" data-t="tap">TAP<span class="tap-hint">リズムに合わせて4回以上叩く</span></button>
+    <div class="field"><div class="field-label">拍子</div>
+      <div class="meters">${METERS.map(m => `<button type="button" data-t="ts" data-v="${m}">${m}</button>`).join('')}</div>
+    </div>
+    <div class="field"><div class="field-label">裏（拍の間も鳴らす）<span>音量は設定の「裏拍」</span></div>
+      <div class="seg" data-t="subs"></div>
+    </div>
+  </div>`;
+}
+// model = { bpm, ts, sub } を画面の操作と結びつける。onChange(field) で呼び出し側に通知。
+function bindTempo(root, model, onChange) {
+  const q = s => root.querySelector(s);
+  const bpmIn = q('[data-t="bpm"]'), range = q('[data-t="range"]'), tapBtn = q('[data-t="tap"]'), subs = q('[data-t="subs"]');
+  const sync = () => {
+    if (document.activeElement !== bpmIn) bpmIn.value = model.bpm;
+    range.value = model.bpm;
+    const kind = meterInfo(model.ts).kind;
+    q('[data-t="unit"]').textContent = UNIT_LABEL[kind];
+    root.querySelectorAll('[data-t="ts"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === model.ts)));
+    if (subs.dataset.kind !== kind) {
+      subs.dataset.kind = kind;
+      subs.innerHTML = SUB_OPTIONS[kind].map(o => `<button type="button" data-t="sub" data-v="${o[0]}">${o[1]}</button>`).join('');
+    }
+    subs.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === model.sub)));
+  };
+  const setBpm = v => {
+    const b = clampBpm(v);
+    if (b === model.bpm) { sync(); return; }
+    model.bpm = b; sync(); onChange('bpm');
+  };
+  // iOS ではボタンを押しても入力欄のフォーカスが外れないことがあるので、保存・再生の前に明示的に読む
+  const flush = () => {
+    const raw = bpmIn.value, v = Number(raw);
+    if (raw !== '' && Number.isFinite(v)) setBpm(v);
+    bpmIn.value = model.bpm;
+  };
+  bpmIn.addEventListener('change', flush);
+  bpmIn.addEventListener('keydown', e => { if (e.key === 'Enter') bpmIn.blur(); });
+  bpmIn.addEventListener('focus', () => bpmIn.select());
+  range.addEventListener('input', () => setBpm(range.value));
+  root.querySelectorAll('[data-t="step"]').forEach(b => holdRepeat(b, () => setBpm(model.bpm + Number(b.dataset.d))));
+  root.querySelectorAll('[data-t="ts"]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.v === model.ts) return;
+    const prevKind = meterInfo(model.ts).kind;
+    model.ts = b.dataset.v;
+    // 4/4 ⇔ 6/8 のように数え方が変わるときは、その拍子の定番に戻す（6/8 は8分を刻むのが基本）
+    model.sub = meterInfo(model.ts).kind !== prevKind ? defaultSub(model.ts) : normalizeSub(model.ts, model.sub);
+    sync(); onChange('ts');
+  }));
+  subs.addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]');
+    if (!b || b.dataset.v === model.sub) return;
+    model.sub = b.dataset.v; sync(); onChange('sub');
+  });
+  const tapper = makeTapper(v => setBpm(v));
+  let hitTimer = 0;
+  const hit = () => { tapper(); tapBtn.classList.add('hit'); clearTimeout(hitTimer); hitTimer = setTimeout(() => tapBtn.classList.remove('hit'), 110); };
+  tapBtn.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); hit(); });
+  tapBtn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) hit(); } });
+  sync();
+  return { sync, flush, setBpm };
+}
+
+let toastTimer = 0;
+function toast(msg, { action, onAction } = {}) {
+  const el = $('#toast');
+  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button type="button">${esc(action)}</button>` : ''}`;
+  el.hidden = false;
+  if (action) el.querySelector('button').onclick = () => { el.hidden = true; onAction(); };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, action ? 6000 : 2600);
+}
+
+/* ================= シート ================= */
+let sheet = null;
+function openSheet(html, opts = {}) {
+  closeSheet();
+  const root = document.createElement('div');
+  root.className = 'sheet-root';
+  root.innerHTML = `<div class="sheet-backdrop"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-grip"></div>${html}</div>`;
+  document.body.appendChild(root);
+  root.querySelector('.sheet-backdrop').addEventListener('click', () => closeSheet());
+  sheet = { root, opts, prevFocus: document.activeElement };
+  document.body.classList.add('sheet-open');
+  return root.querySelector('.sheet');
+}
+function closeSheet() {
+  if (!sheet) return;
+  const { root, opts, prevFocus } = sheet;
+  sheet = null;
+  root.remove();
+  document.body.classList.remove('sheet-open');
+  opts.onClose?.();
+  if (prevFocus && document.contains(prevFocus)) prevFocus.focus({ preventScroll: true });
+}
+function dialog({ title, message = '', input = null, ok = 'OK', danger = false }) {
+  return new Promise(resolve => {
+    let done = false;
+    const el = openSheet(`
+      <div class="dlg">
+        <h2 class="dlg-title">${esc(title)}</h2>
+        ${message ? `<p class="dlg-msg">${esc(message)}</p>` : ''}
+        ${input !== null ? '<input class="input" data-x="in" maxlength="60" autocomplete="off" enterkeyhint="done">' : ''}
+        <div class="dlg-actions"><button class="ghost-btn" data-x="no">キャンセル</button><button class="fill-btn${danger ? ' danger' : ''}" data-x="ok">${esc(ok)}</button></div>
+      </div>`, { onClose: () => { if (!done) resolve(null); } });
+    const inp = el.querySelector('[data-x="in"]');
+    const accept = () => {
+      const v = inp ? inp.value.trim() : true;
+      if (inp && !v) { inp.focus(); return; }
+      done = true; closeSheet(); resolve(v);
+    };
+    if (inp) {
+      inp.value = input;
+      setTimeout(() => { inp.focus(); inp.select(); }, 60);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) accept(); });
+    }
+    el.querySelector('[data-x="ok"]').addEventListener('click', accept);
+    el.querySelector('[data-x="no"]').addEventListener('click', () => closeSheet());
+  });
+}
+
+/* ---------- 曲の追加・編集 ---------- */
+function openEditor(songId, preset = null) {
+  const sl = cur();
+  const orig = songId ? sl.songs.find(s => s.id === songId) : null;
+  const draft = orig ? { ...orig } : { id: uid(), title: '', bpm: 120, ts: '4/4', sub: 'none', note: '', ...(preset || {}) };
+  const el = openSheet(`
+    <div class="sheet-head"><button class="text-btn" data-x="cancel">キャンセル</button><h2>${orig ? '曲を編集' : `「${esc(sl.name)}」に追加`}</h2><button class="text-btn primary" data-x="save">保存</button></div>
+    <div class="stack">
+      <label class="field"><div class="field-label">曲名</div><input class="input" data-x="title" maxlength="80" placeholder="例：1曲目のタイトル" autocomplete="off" enterkeyhint="done"></label>
+      ${tempoHTML()}
+      <button type="button" class="ghost-btn" data-x="preview"></button>
+      <label class="field"><div class="field-label">メモ <span>任意・一覧に表示</span></div><input class="input" data-x="note" maxlength="140" placeholder="例：カウント2小節／イントロはドラムから" autocomplete="off" enterkeyhint="done"></label>
+      ${orig ? '<button type="button" class="danger-btn" data-x="delete">この曲を削除</button>' : ''}
+    </div>`, { onClose: () => { off(); if (Engine.active && Engine.src?.kind === 'preview') Engine.stop(); } });
+  const titleIn = el.querySelector('[data-x="title"]'), noteIn = el.querySelector('[data-x="note"]');
+  const previewBtn = el.querySelector('[data-x="preview"]');
+  titleIn.value = draft.title; noteIn.value = draft.note;
+  [titleIn, noteIn].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) i.blur(); }));
+  const previewing = () => Engine.active && Engine.src?.kind === 'preview';
+  const startPreview = () => Engine.start({ kind: 'preview', title: draft.title, ...toEngine(draft) });
+  const syncPreview = () => {
+    previewBtn.innerHTML = previewing() ? `${ICON.stop}<span>試聴を止める</span>` : `${ICON.play}<span>試聴</span>`;
+    previewBtn.classList.toggle('on', previewing());
+  };
+  const off = Engine.on(syncPreview);
+  const tempo = bindTempo(el, draft, field => {
+    if (!previewing()) return;
+    if (field === 'bpm') Engine.setBpm(draft.bpm);
+    else startPreview();
+  });
+  previewBtn.addEventListener('click', () => {
+    tempo.flush();
+    if (previewing()) Engine.stop(); else startPreview();
+  });
+  syncPreview();
+  if (!orig) setTimeout(() => titleIn.focus(), 80);
+
+  el.querySelector('[data-x="cancel"]').addEventListener('click', () => closeSheet());
+  el.querySelector('[data-x="save"]').addEventListener('click', () => {
+    tempo.flush();
+    draft.title = titleIn.value.trim().slice(0, 80) || '無題';
+    draft.note = noteIn.value.trim().slice(0, 140);
+    let target = orig;
+    if (orig) Object.assign(orig, draft);
+    else { target = { ...draft }; sl.songs.push(target); ui.cuedId = target.id; }
+    save();
+    const src = Engine.src;
+    const wasPlayingThis = Engine.active && src?.kind === 'song' && src.songId === target.id;
+    const meterChanged = wasPlayingThis && (src.ts !== target.ts || src.subKey !== target.sub);
+    closeSheet();
+    if (wasPlayingThis) {
+      if (meterChanged) playSong(target, sl.id);
+      else { src.title = target.title; src.baseBpm = target.bpm; Engine.setBpm(target.bpm); }
+    }
+    if (preset) ui.view = 'setlist';
+    render();
+    if (!orig) setTimeout(() => scrollToSong(target.id), 50);
+  });
+  el.querySelector('[data-x="delete"]')?.addEventListener('click', () => {
+    const i = sl.songs.indexOf(orig);
+    if (i < 0) return;
+    sl.songs.splice(i, 1);
+    if (playingSongId() === orig.id) Engine.stop();
+    save(); closeSheet(); render();
+    toast(`「${orig.title}」を削除しました`, { action: '元に戻す', onAction: () => {
+      sl.songs.splice(Math.min(i, sl.songs.length), 0, orig); save(); render();
+    } });
+  });
+}
+
+/* ---------- まとめて追加 ---------- */
+// 1行1曲。「曲名 BPM」＋任意で拍子（3/4・6/8…）と裏（8分・16分・3連）。番号・全角数字・カンマ区切りも許す
+function parseBulk(text) {
+  const out = [];
+  for (let line of String(text).split(/\r?\n/)) {
+    line = line.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/／/g, '/').replace(/[,，、\t　]/g, ' ').trim()
+      .replace(/^\d{1,3}\s*[.)．）:：]\s*/, '');
+    if (!line) continue;
+    const toks = line.split(/\s+/);
+    let ts = '4/4', sub = null, bpmAt = -1, bpm = null;
+    const skip = new Set();
+    toks.forEach((tok, i) => {
+      if (METERS.includes(tok)) { ts = tok; skip.add(i); }
+      else if (/^(8分裏?|裏|8th)$/i.test(tok)) { sub = '8th'; skip.add(i); }
+      else if (/^(16分|16th)$/i.test(tok)) { sub = '16th'; skip.add(i); }
+      else if (/^(3連|三連)$/.test(tok)) { sub = 'triplet'; skip.add(i); }
+    });
+    for (let i = toks.length - 1; i >= 0; i--) {
+      if (skip.has(i)) continue;
+      const m = toks[i].match(/^(?:bpm|♩=?|=)?(\d{2,3})(?:bpm)?$/i);
+      if (m && Number(m[1]) >= BPM_MIN && Number(m[1]) <= BPM_MAX) { bpm = Number(m[1]); bpmAt = i; break; }
+    }
+    const title = toks.filter((_, i) => i !== bpmAt && !skip.has(i)).join(' ').slice(0, 80) || '無題';
+    out.push({ title, bpm: bpm ?? 120, noBpm: bpm === null, ts, sub: sub ? normalizeSub(ts, sub) : defaultSub(ts) });
+  }
+  return out;
+}
+function openBulk() {
+  const sl = cur();
+  const el = openSheet(`
+    <div class="sheet-head"><button class="text-btn" data-x="cancel">キャンセル</button><h2>まとめて追加</h2><button class="text-btn primary" data-x="add">追加</button></div>
+    <div class="stack">
+      <p class="hint" style="margin:0">「${esc(sl.name)}」の最後に追加します。1行に1曲、<b>曲名 BPM</b> の順で書いてください。拍子（3/4・6/8 など）や裏（8分・16分・3連）も書けます。</p>
+      <textarea class="input" data-x="text" rows="7" placeholder="1曲目 168&#10;2曲目 185 8分&#10;3曲目 92 3/4&#10;バラード 58 6/8"></textarea>
+      <ul class="parse-list" data-x="list"></ul>
+    </div>`);
+  const ta = el.querySelector('[data-x="text"]'), list = el.querySelector('[data-x="list"]'), addBtn = el.querySelector('[data-x="add"]');
+  const update = () => {
+    const rows = parseBulk(ta.value);
+    list.innerHTML = rows.map(r => `<li><span class="t">${esc(r.title)}</span><span class="m${r.noBpm ? ' warn' : ''}">${r.noBpm ? 'BPMなし→120' : r.bpm} ・ ${esc(meterText(r))}</span></li>`).join('');
+    addBtn.textContent = rows.length ? `${rows.length}曲を追加` : '追加';
+    addBtn.disabled = !rows.length;
+    return rows;
+  };
+  ta.addEventListener('input', update);
+  update();
+  setTimeout(() => ta.focus(), 80);
+  el.querySelector('[data-x="cancel"]').addEventListener('click', () => closeSheet());
+  addBtn.addEventListener('click', () => {
+    const rows = update();
+    if (!rows.length) return;
+    const first = rows[0];
+    for (const r of rows) sl.songs.push({ id: uid(), title: r.title, bpm: r.bpm, ts: r.ts, sub: r.sub, note: '' });
+    save(); closeSheet(); render();
+    toast(`${rows.length}曲を追加しました`);
+    const firstNew = sl.songs[sl.songs.length - rows.length];
+    if (firstNew && first) setTimeout(() => scrollToSong(firstNew.id), 50);
+  });
+}
+
+/* ---------- セトリの作成・管理 ---------- */
+function openNewSetlist() {
+  const el = openSheet(`
+    <div class="sheet-head"><button class="text-btn" data-x="cancel">キャンセル</button><h2>新しいセトリ</h2><button class="text-btn primary" data-x="create">作成</button></div>
+    <div class="stack">
+      <label class="field"><div class="field-label">名前</div><input class="input" data-x="name" maxlength="60" autocomplete="off" enterkeyhint="done"></label>
+      <div class="or">または</div>
+      <label class="field"><div class="field-label">共有リンクから取り込む</div>
+        <textarea class="input" data-x="link" rows="3" placeholder="送られてきた共有リンクを貼り付け"></textarea>
+        <p class="hint">ホーム画面に追加したアプリで使うときは、リンクを開かずにここへ貼り付けてください（iPhone はブラウザとアプリで保存場所が別のため）。</p>
+      </label>
+      <button type="button" class="ghost-btn" data-x="import">リンクから取り込む</button>
+    </div>`);
+  const nameIn = el.querySelector('[data-x="name"]');
+  nameIn.placeholder = nextSetlistName();
+  setTimeout(() => nameIn.focus(), 80);
+  const create = () => {
+    const sl = { id: uid(), name: uniqueName(nameIn.value.trim().slice(0, 60) || nextSetlistName()), songs: [] };
+    S.setlists.push(sl); S.currentId = sl.id; ui.view = 'setlist'; ui.edit = false; ui.cuedId = null;
+    save(); closeSheet(); render(); window.scrollTo({ top: 0 });
+  };
+  nameIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) create(); });
+  el.querySelector('[data-x="create"]').addEventListener('click', create);
+  el.querySelector('[data-x="cancel"]').addEventListener('click', () => closeSheet());
+  el.querySelector('[data-x="import"]').addEventListener('click', () => {
+    const sl = decodeShared(el.querySelector('[data-x="link"]').value);
+    if (!sl) { toast('共有リンクを読み取れませんでした'); return; }
+    closeSheet();
+    importSetlist(sl, false);
+  });
+}
+async function setlistAction(x) {
+  const sl = cur(), i = S.setlists.indexOf(sl);
+  if (x === 'rename') {
+    const name = await dialog({ title: 'セトリの名前', input: sl.name, ok: '変更' });
+    if (name) { sl.name = name.slice(0, 60); save(); render(); }
+  } else if (x === 'dup') {
+    const c = { id: uid(), name: uniqueName(`${sl.name}（コピー）`), songs: sl.songs.map(s => ({ ...s, id: uid() })) };
+    S.setlists.splice(i + 1, 0, c); S.currentId = c.id;
+    save(); render(); toast('複製しました');
+  } else if (x === 'share') {
+    shareSetlist(sl);
+  } else if (x === 'left' || x === 'right') {
+    const j = x === 'left' ? i - 1 : i + 1;
+    if (j < 0 || j >= S.setlists.length) return;
+    [S.setlists[i], S.setlists[j]] = [S.setlists[j], S.setlists[i]];
+    save(); render();
+  } else if (x === 'del') {
+    const ok = await dialog({ title: `「${sl.name}」を削除しますか？`, message: `${sl.songs.length}曲がすべて消えます。元に戻せません。`, ok: '削除', danger: true });
+    if (!ok) return;
+    if (Engine.active && Engine.src?.setlistId === sl.id) Engine.stop();
+    S.setlists.splice(i, 1);
+    if (!S.setlists.length) S.setlists.push({ id: uid(), name: 'セトリ1', songs: [] });
+    S.currentId = S.setlists[Math.max(0, i - 1)].id;
+    ui.cuedId = null; ui.edit = false;
+    save(); render(); toast('削除しました');
+  }
+}
+
+/* ---------- 共有・バックアップ ---------- */
+function b64uEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64uDecode(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function decodeShared(text) {
+  const m = String(text).match(/#import=([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  try {
+    const p = JSON.parse(b64uDecode(m[1]));
+    return sanitizeSetlist({ name: p.n, songs: (Array.isArray(p.s) ? p.s : []).map(a => ({ title: a[0], bpm: a[1], ts: a[2], sub: a[3], note: a[4] })) });
+  } catch { return null; }
+}
+async function shareSetlist(sl) {
+  const payload = { v: 2, n: sl.name, s: sl.songs.map(s => [s.title, s.bpm, s.ts, s.sub, s.note]) };
+  const url = `${location.origin}${location.pathname}#import=${b64uEncode(JSON.stringify(payload))}`;
+  const text = `SetClick のセトリ「${sl.name}」（${sl.songs.length}曲）`;
+  if (navigator.share) {
+    try { await navigator.share({ title: text, text, url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); toast('共有リンクをコピーしました'); }
+  catch { await dialog({ title: '共有リンク', message: 'コピーして送ってください', input: url, ok: '閉じる' }); }
+}
+async function importSetlist(sl, ask = true) {
+  if (ask) {
+    const ok = await dialog({ title: `「${sl.name}」を取り込みますか？`, message: `${sl.songs.length}曲。新しいセトリとして追加します（今あるセトリはそのまま）。`, ok: '取り込む' });
+    if (!ok) return;
+  }
+  sl.id = uid(); sl.songs.forEach(s => { s.id = uid(); });
+  sl.name = uniqueName(sl.name);
+  S.setlists.push(sl); S.currentId = sl.id; ui.view = 'setlist'; ui.cuedId = null; ui.edit = false;
+  save(); render(); window.scrollTo({ top: 0 }); toast(`「${sl.name}」を取り込みました`);
+}
+function handleImportHash() {
+  if (!location.hash.startsWith('#import=')) return;
+  const sl = decodeShared(location.hash);
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!sl) { toast('共有リンクを読み込めませんでした'); return; }
+  importSetlist(sl, true);
+}
+function exportBackup() {
+  const data = JSON.stringify({ app: 'setclick', v: 2, exportedAt: new Date().toISOString(), setlists: S.setlists }, null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  const d = new Date();
+  a.download = `setclick-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+async function importBackup(file) {
+  let lists = [];
+  try {
+    const d = JSON.parse(await file.text());
+    lists = (Array.isArray(d?.setlists) ? d.setlists : []).map(sanitizeSetlist).filter(Boolean);
+  } catch {}
+  if (!lists.length) { toast('ファイルを読み込めませんでした'); return; }
+  const ok = await dialog({ title: `${lists.length}件のセトリを取り込みますか？`, message: '今あるセトリはそのまま残り、後ろに追加されます。', ok: '取り込む' });
+  if (!ok) return;
+  for (const l of lists) {
+    l.id = uid(); l.songs.forEach(s => { s.id = uid(); }); l.name = uniqueName(l.name);
+    S.setlists.push(l);
+  }
+  save(); render(); toast(`${lists.length}件取り込みました`);
+}
+
+/* ---------- 設定 ---------- */
+function openSettings() {
+  const st = S.settings;
+  const el = openSheet(`
+    <div class="sheet-head"><span></span><h2>設定</h2><button class="text-btn" data-x="close">閉じる</button></div>
+    <div class="stack">
+      <div class="field"><div class="field-label">音色</div><div class="seg" data-g="sound">${SOUNDS.map(o => `<button type="button" data-v="${o.v}">${o.label}</button>`).join('')}</div></div>
+      <div class="field"><div class="field-label">音量</div>
+        <div class="slider-row"><span>全体</span><input type="range" min="0" max="100" step="1" data-k="volume" aria-label="全体の音量"><span class="v num" data-v="volume"></span></div>
+      </div>
+      <div class="field"><div class="field-label">バランス <span>裏拍＝8分裏・3連・16分など拍の間の音</span></div>
+        ${MIX.map(m => `<div class="slider-row"><span>${m.label}</span><input type="range" min="0" max="100" step="1" data-k="${m.k}" aria-label="${m.label}の音量"><span class="v num" data-v="${m.k}"></span></div>`).join('')}
+        <p class="hint">表拍を 0% にすると裏だけ鳴らせます。</p>
+      </div>
+      <div class="field"><div class="field-label">セトリ再生のカウント</div>
+        <div class="seg" data-g="count">${COUNT_MODES.map(o => `<button type="button" data-v="${o.v}">${o.label}</button>`).join('')}</div>
+        <p class="hint">「1小節で停止」はテンポを耳に入れてからカウントを出すとき用。フリーでは常に鳴らし続けます。</p>
+      </div>
+      <div class="toggle-row"><div><div class="t">1拍目を高い音にする</div><p class="hint">オフにすると1拍目も表拍と同じ音</p></div><button type="button" class="switch" role="switch" data-x="accent" aria-label="1拍目を高い音にする"></button></div>
+      <div class="toggle-row"><div><div class="t">画面フラッシュ</div><p class="hint">拍に合わせて画面が光る（音が聞き取りにくいステージ用）</p></div><button type="button" class="switch" role="switch" data-x="flash" aria-label="画面フラッシュ"></button></div>
+      <div class="field"><div class="field-label">バックアップ</div>
+        <div class="two"><button type="button" class="ghost-btn" data-x="export">書き出し</button><button type="button" class="ghost-btn" data-x="import">読み込み</button></div>
+        <input type="file" accept="application/json,.json" data-x="file" hidden>
+        <p class="hint">データはこの端末のブラウザ内だけに保存されています。機種変更の前や、たまに書き出しておくと安心です。</p>
+      </div>
+      <div>
+        <p class="hint center">SetClick v${APP_VERSION}</p>
+        <p class="hint center kbd-only">Space: 再生・停止　←→: 曲送り　↑↓: テンポ</p>
+      </div>
+    </div>`);
+  const getV = k => (k === 'volume' ? st.volume : st.mix[k]);
+  const setV = (k, v) => { if (k === 'volume') st.volume = v; else st.mix[k] = v; };
+  const sync = () => {
+    el.querySelectorAll('[data-g="sound"] button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.sound)));
+    el.querySelectorAll('[data-g="count"] button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === st.countBars)));
+    el.querySelector('[data-x="accent"]').setAttribute('aria-checked', String(st.accent));
+    el.querySelector('[data-x="flash"]').setAttribute('aria-checked', String(st.flash));
+    el.querySelectorAll('input[data-k]').forEach(r => {
+      const pct = Math.round(getV(r.dataset.k) * 100);
+      r.value = pct;
+      el.querySelector(`[data-v="${r.dataset.k}"]`).textContent = `${pct}%`;
+    });
+  };
+  sync();
+  const changed = () => { save(); sync(); renderDock(); renderFree(); };
+  el.querySelectorAll('input[data-k]').forEach(r => {
+    r.addEventListener('input', () => { setV(r.dataset.k, Number(r.value) / 100); Engine.setVolume(); changed(); });
+    // 止まっているときは離した瞬間に1音鳴らして確認できるように
+    r.addEventListener('change', () => { if (!Engine.active) Engine.blip(r.dataset.k === 'volume' ? 'accent' : r.dataset.k); });
+  });
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const g = b.closest('[data-g]')?.dataset.g;
+    if (g === 'sound') { st.sound = b.dataset.v; changed(); if (!Engine.active) Engine.blip(); return; }
+    if (g === 'count') { st.countBars = Number(b.dataset.v); changed(); return; }
+    const x = b.dataset.x;
+    if (x === 'accent') { st.accent = !st.accent; changed(); }
+    else if (x === 'flash') { st.flash = !st.flash; changed(); }
+    else if (x === 'export') exportBackup();
+    else if (x === 'import') el.querySelector('[data-x="file"]').click();
+    else if (x === 'close') closeSheet();
+  });
+  el.querySelector('[data-x="file"]').addEventListener('change', e => {
+    const f = e.target.files?.[0];
+    if (f) importBackup(f);
+  });
+}
+
+/* ================= イベント ================= */
+$('#songList').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const li = btn.closest('li[data-id]');
+  const sl = cur();
+  const i = sl.songs.findIndex(s => s.id === li.dataset.id);
+  if (i < 0) return;
+  const song = sl.songs[i];
+  const act = btn.dataset.act;
+  if (act === 'toggle') toggleSong(song);
+  else if (act === 'edit') openEditor(song.id);
+  else if (act === 'up' || act === 'down') {
+    const j = act === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= sl.songs.length) return;
+    [sl.songs[i], sl.songs[j]] = [sl.songs[j], sl.songs[i]];
+    save(); renderList(); renderDock();
+    const again = $(`#songList li[data-id="${song.id}"] [data-act="${act}"]`);
+    if (again && !again.disabled) again.focus({ preventScroll: true });
+    scrollToSong(song.id);
+  }
+});
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.x === 'new') openNewSetlist();
+  else if (b.dataset.view === 'free') { if (ui.view !== 'free') { ui.view = 'free'; ui.edit = false; render(); window.scrollTo({ top: 0 }); } }
+  else if (b.dataset.sl) showSetlist(b.dataset.sl);
+});
+$('#slTools').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) setlistAction(b.dataset.x); });
+$('#addSongBtn').addEventListener('click', () => openEditor(null));
+$('#bulkBtn').addEventListener('click', openBulk);
+$('#settingsBtn').addEventListener('click', openSettings);
+$('#editBtn').addEventListener('click', () => { ui.edit = !ui.edit; render(); });
+$('#playBtn').addEventListener('click', dockPlay);
+$('#prevBtn').addEventListener('click', () => step(-1));
+$('#nextBtn').addEventListener('click', () => step(1));
+holdRepeat($('#bpmMinus'), () => nudge(-1));
+holdRepeat($('#bpmPlus'), () => nudge(1));
+$('#saveBpm').addEventListener('click', saveNudge);
+$('#freePlay').addEventListener('click', freeToggle);
+$('#freeAdd').addEventListener('click', () => { freeTempo.flush(); openEditor(null, { ...S.free }); });
+
+document.addEventListener('keydown', e => {
+  if (sheet) { if (e.key === 'Escape') closeSheet(); return; }
+  if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+  const t = e.target;
+  if (t.closest && t.closest('input,textarea,select,[contenteditable="true"]')) return;
+  if ((e.key === ' ' || e.key === 'Enter') && t.closest && t.closest('button')) return;
+  if (e.key === ' ') { e.preventDefault(); ui.view === 'free' ? freeToggle() : dockPlay(); }
+  else if (e.key === 'ArrowRight' && ui.view === 'setlist') { e.preventDefault(); step(1); }
+  else if (e.key === 'ArrowLeft' && ui.view === 'setlist') { e.preventDefault(); step(-1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); nudge(1); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-1); }
+});
+
+new ResizeObserver(measureDock).observe($('#dock'));
+window.addEventListener('hashchange', handleImportHash);
+
+/* ================= 起動 ================= */
+$('#freeTempo').innerHTML = tempoHTML();
+freeTempo = bindTempo($('#freeTempo'), S.free, field => {
+  save();
+  if (Engine.active && Engine.src?.kind === 'free') {
+    if (field === 'bpm') Engine.setBpm(S.free.bpm);
+    else Engine.start({ kind: 'free', title: 'フリー', ...toEngine(S.free) });
+  }
+  renderFree();
+});
+render();
+handleImportHash();
+if (DEBUG) window.SetClick = { Engine, get state() { return S; }, ui, parseBulk, toEngine };
+
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /[?&]sw\b/.test(location.search))) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) toast('新しいバージョンがあります', { action: '再読み込み', onAction: () => location.reload() });
+  });
+}
+</script>
+</body>
+</html>
