@@ -3,6 +3,9 @@
 最新が上。
 
 ## 2026-09-18
+### 公開
+- Koki の承認を得て `isojz/setclick`（public）を作成・push、GitHub Pages を有効化 → https://isojz.github.io/setclick/
+
 ### v1.1.0 — 初期実装（単一 HTML の PWA）
 - Koki の要望「複数セトリを保存、曲ボタンをタップでその BPM で鳴る」→ SetClick を新規作成
 - 途中で追加要望：拍子（4拍子・3拍子…）と裏の選択、裏だけ別の音量、セトリ1＝曲1,2,3… という複数セトリの見せ方、自分で曲・セトリを登録できること

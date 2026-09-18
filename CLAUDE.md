@@ -6,7 +6,8 @@ Koki（ドラム）がリハ・ライブで使うメトロノーム。セトリ�
 ## 構成
 - **単一 HTML の PWA**（ビルドなし）：`index.html` / `manifest.webmanifest` / `sw.js` / `icon-*.png`
 - データは端末の localStorage（キー `setclick:v1`）。サーバー・クラウド同期なし
-- ホスティング想定：GitHub Pages（midnight-chat-sales と同じパターン）
+- 公開 URL：**https://isojz.github.io/setclick/** （GitHub Pages、main ブランチ直下。push で自動反映）
+- リポジトリ：https://github.com/isojz/setclick （public。コードのみで個人データは含まない）
 
 ## 設計上の要点（変えるときは理由を理解してから）
 - **発音は Web Audio の先読みスケジューラ**（Worker の 25ms tick → 120ms 先まで AudioContext 時刻で予約）。setTimeout で直接鳴らすとテンポが揺れる
