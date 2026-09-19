@@ -65,12 +65,12 @@ svg{display:block;flex-shrink:0}
 
 /* ---------- 3階層 ---------- */
 /* 浮く：実際に演奏中に触る部品だけ */
-.ctl,.nudge,.tap-pad,.mute{background:var(--raised);border:1px solid var(--edge);box-shadow:var(--raised-shadow);color:var(--text);transition:transform .05s,box-shadow .05s}
-.ctl:active:not(:disabled),.nudge:active:not(:disabled),.tap-pad:active,.mute:active:not(:disabled),.big-play:active,.fill-btn:active{transform:translateY(2px);box-shadow:var(--pressed-shadow)}
+.ctl,.nudge,.step,.tap-pad,.mute{background:var(--raised);border:1px solid var(--edge);box-shadow:var(--raised-shadow);color:var(--text);transition:transform .05s,box-shadow .05s}
+.ctl:active:not(:disabled),.nudge:active:not(:disabled),.step:active,.tap-pad:active,.mute:active:not(:disabled),.big-play:active,.fill-btn:active{transform:translateY(2px);box-shadow:var(--pressed-shadow)}
 /* 平ら：それ以外のボタン・選択肢は細い罫線だけ */
-.pill-btn,.icon-btn,.chip-tab,.sl-tools button,.step,.meters button,.ghost-btn,.add-btn,.seg button,.song-tools button{
+.pill-btn,.icon-btn,.chip-tab,.sl-tools button,.meters button,.ghost-btn,.add-btn,.seg button,.song-tools button{
   min-height:var(--tap);background:transparent;border:1px solid var(--line);border-radius:var(--r-md);color:var(--muted);font-weight:700}
-.pill-btn:active,.icon-btn:active,.chip-tab:active,.sl-tools button:active,.step:active,.meters button:active,.ghost-btn:active,.add-btn:active,.seg button:active,
+.pill-btn:active,.icon-btn:active,.chip-tab:active,.sl-tools button:active,.meters button:active,.ghost-btn:active,.add-btn:active,.seg button:active,
 .song-tools button:active:not(:disabled){background:rgba(255,255,255,.05)}
 /* 選択中はアンバーの下線で統一 */
 .pill-btn[aria-pressed="true"],.chip-tab[aria-selected="true"],.meters button[aria-pressed="true"],.seg button[aria-pressed="true"],.ghost-btn.on{
@@ -98,18 +98,17 @@ svg{display:block;flex-shrink:0}
 
 /* ---------- 本文 ---------- */
 main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 24px)}
-body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
 .sl-head{margin:0 2px 12px}
 .sl-title-row{display:flex;align-items:baseline;gap:10px}
 .sl-title{margin:0;font-size:var(--fs-xl);font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sl-meta{font-size:var(--fs-sm);color:var(--dim);flex-shrink:0}
-.sl-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
-.sl-tools button{font-size:var(--fs-sm)}
+.sl-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.sl-tools button{flex:1 1 30%;font-size:var(--fs-sm)}
 .sl-danger{margin-top:32px}
-.songs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.song{position:relative;display:flex;align-items:stretch;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
+.songs{list-style:none;margin:0 -16px;padding:0;border-top:1px solid var(--line)}
+.song{position:relative;display:flex;align-items:stretch;border-bottom:1px solid var(--line);
   scroll-margin-top:150px;scroll-margin-bottom:calc(var(--dock-h) + 12px)}
-.song-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 12px;text-align:left;min-height:68px}
+.song-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 16px 10px 14px;text-align:left;min-height:68px}
 .song-main:active{background:var(--panel-2)}
 .song-no{width:22px;flex-shrink:0;font-size:var(--fs-sm);color:var(--dim);text-align:center;font-family:var(--mono)}
 .song-body{flex:1;min-width:0}
@@ -120,15 +119,16 @@ body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
 .song-bpm{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;font-family:var(--mono);font-variant-numeric:tabular-nums;
   font-size:var(--fs-xl);font-weight:700;line-height:1}
 .song-bpm small{font-size:var(--fs-xs);color:var(--dim);margin-top:4px;font-weight:600;font-family:inherit}
-.song.cued{border-color:#4a4f58}
-.song.playing{border-color:rgba(255,178,62,.6)}
-.song.playing::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--led)}
-.song.playing .song-no,.song.playing .song-bpm{color:var(--led)}
-.songs.editing .song{border-style:dashed}
+.song.cued{background:var(--panel)}
+/* 再生中の強調は「左のバー＋BPM の色」の2つだけ */
+.song.playing{background:var(--panel)}
+.song.playing::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--led)}
+.song.playing .song-bpm{color:var(--led)}
+.chip.draft{color:var(--led);border-color:rgba(255,178,62,.5);font-family:inherit}
 .edit-mark{color:var(--dim)}
 .song-tools{display:flex;align-items:center;gap:4px;padding-right:8px}
 .song-tools button{width:var(--tap);display:grid;place-items:center}
-.add-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+.add-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:16px}
 .add-btn{padding:0 16px;font-size:var(--fs-sm)}
 .empty{text-align:center;padding:32px 16px 16px;color:var(--muted)}
 .empty-title{margin:0;font-weight:700;font-size:var(--fs-md)}
@@ -138,31 +138,34 @@ body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
 @media (hover:hover) and (pointer:fine){.kbd-only{display:block}}
 
 /* ---------- 拍の LED ---------- */
-.beats{display:flex;justify-content:center;flex-wrap:wrap;gap:10px}
-.beats span{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
+.beats{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
+.beats span{width:18px;height:18px;border-radius:50%;flex:0 0 auto;
   background:radial-gradient(circle at 35% 35%,#3b4048,#15171b 70%);box-shadow:0 0 0 2px #08090b,inset 0 1px 2px rgba(0,0,0,.7)}
 .beats span.grp{box-shadow:0 0 0 2px #08090b,0 0 0 3.5px #3a3f47}
 .beats span.on{background:radial-gradient(circle at 35% 35%,#d9ffe6,var(--green) 55%,#1c6e3d);box-shadow:0 0 0 2px #08090b,0 0 10px 2px rgba(70,226,127,.5)}
 .beats span.acc.on{background:radial-gradient(circle at 35% 35%,#ffd6cc,var(--red) 55%,#7e1a10);box-shadow:0 0 0 2px #08090b,0 0 12px 3px rgba(255,79,60,.55)}
 .beats.big{gap:14px;padding:6px 0}
-.beats.big span{width:22px;height:22px}
+.beats.big span{width:24px;height:24px}
 
 /* ---------- ドック（プレイヤー） ---------- */
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px calc(var(--safe-b) + 10px)}
 .dock-inner{position:relative;max-width:var(--col);margin:0 auto}
 .dock-row{display:flex;align-items:stretch;gap:8px;margin-top:10px}
 .nudge{width:var(--tap);border-radius:var(--r-md);display:grid;place-items:center;font-size:var(--fs-xl);font-weight:500}
-.dock-lcd{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;min-height:64px}
+.dock-lcd{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;min-height:76px}
 .dock-info{flex:1;min-width:0}
 .dock-title{font-weight:700;font-size:var(--fs-lg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dock-sub{font-size:var(--fs-xs);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-sub{font-size:var(--fs-sm);opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bpm-box{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
-.bpm-box .val{display:block;height:36px}
+.bpm-box .val{display:block;height:44px}
 .bpm-box .val.changed{color:#ff7a45}
 .bpm-box .unit{font-size:var(--fs-xs);opacity:.6;line-height:1;margin-top:5px}
 /* 微調整したテンポの保存：ドックの上に浮かぶ大きめのボタン */
-.save-bpm{position:absolute;right:0;bottom:calc(100% + 20px);min-height:var(--tap);padding:0 18px;border-radius:var(--r-md);
-  background:var(--led);color:#1b1204;font-weight:800;font-size:var(--fs-sm);box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.draft-bar{position:absolute;right:0;bottom:calc(100% + 20px);display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;border-radius:var(--r-md);
+  background:var(--screen);border:1px solid rgba(255,178,62,.45);box-shadow:0 6px 18px rgba(0,0,0,.55);font-size:var(--fs-sm)}
+.draft-msg{color:var(--led);font-weight:700;white-space:nowrap}
+.draft-btn{min-height:var(--tap);padding:0 14px;border-radius:var(--r-sm);font-weight:800;border:1px solid var(--line);color:var(--text)}
+.draft-btn.primary{background:var(--led);border-color:var(--led);color:#1b1204}
 .dock-mixer{margin-top:10px}
 .dock-controls{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;margin-top:10px}
 .ctl{min-height:52px;border-radius:var(--r-md);display:grid;place-items:center}
@@ -174,6 +177,7 @@ body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
 
 /* ---------- フリー / テンポ操作 ---------- */
 #freeView{display:flex;flex-direction:column;align-items:stretch;gap:16px}
+.free-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px calc(var(--safe-b) + 10px)}
 .free-now{font-size:var(--fs-sm);text-align:center;padding:8px 12px}
 .tempo{display:flex;flex-direction:column;gap:14px}
 .big-lcd{position:relative;padding:14px 12px 10px;display:flex;flex-direction:column;align-items:center}
@@ -184,7 +188,7 @@ body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
 .big-num:focus{opacity:1;outline:none}
 .bpm-label{font-size:var(--fs-xs);opacity:.6;margin-top:6px;text-align:center}
 .stepper-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.step{font-size:var(--fs-md);font-family:var(--mono);color:var(--text)}
+.step{min-height:var(--tap);border-radius:var(--r-md);font-size:var(--fs-md);font-weight:700;font-family:var(--mono)}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:var(--tap);background:transparent;margin:0}
 input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#07080a;box-shadow:inset 0 1px 3px rgba(0,0,0,.9)}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:32px;margin-top:-13px;border-radius:var(--r-sm);border:1px solid var(--edge);
@@ -267,7 +271,6 @@ textarea.input{resize:vertical;line-height:1.6}
   background:var(--screen);border:1px solid #000;color:var(--led);min-height:var(--tap);
   padding:0 16px;border-radius:var(--r-md);font-size:var(--fs-sm);font-weight:700;display:flex;gap:14px;align-items:center;
   box-shadow:0 10px 30px rgba(0,0,0,.6);width:max-content;max-width:calc(100% - 32px)}
-body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
 .toast button{min-height:var(--tap);color:var(--text);font-weight:800;flex-shrink:0;text-decoration:underline}
 
 @keyframes up{from{transform:translateY(48px);opacity:0}to{transform:none;opacity:1}}
@@ -330,14 +333,21 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
   <div id="freeNow" class="free-now lcd" hidden></div>
   <div id="freeBeats" class="beats big"></div>
   <div id="freeTempo"></div>
-  <button id="freePlay" class="big-play"></button>
   <button id="freeAdd" class="ghost-btn">このテンポで今のセトリに追加</button>
 </main>
+
+<section id="freeBar" class="free-bar" aria-label="フリーの再生" hidden>
+  <div class="dock-inner"><button id="freePlay" class="big-play"></button></div>
+</section>
 
 <section id="dock" class="dock" aria-label="プレイヤー">
   <div class="dock-inner">
     <div id="dockBeats" class="beats"></div>
-    <button id="saveBpm" class="save-bpm" hidden></button>
+    <div id="draftBar" class="draft-bar" role="status" hidden>
+      <span class="draft-msg">未保存の変更</span>
+      <button id="draftRevert" class="draft-btn">戻す</button>
+      <button id="draftSave" class="draft-btn primary">保存</button>
+    </div>
     <div class="dock-row">
       <button id="bpmMinus" class="nudge" aria-label="テンポを1下げる">−</button>
       <div class="dock-lcd lcd">
@@ -347,7 +357,7 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
         </div>
         <div class="bpm-box">
           <span id="dockBpm" class="val" role="img"></span>
-          <span class="unit">BPM</span>
+          <span id="dockUnit" class="unit">BPM</span>
         </div>
       </div>
       <button id="bpmPlus" class="nudge" aria-label="テンポを1上げる">＋</button>
@@ -370,7 +380,7 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
 
 <script>
 'use strict';
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 const KEY = 'setclick:v1';
 const BPM_MIN = 20, BPM_MAX = 300;
 const DEBUG = /[?&]debug\b/.test(location.search);
@@ -560,7 +570,7 @@ function nextSetlistName() {
 // setTimeout で直接鳴らすとメインスレッドの負荷でテンポが揺れるため、この方式にしている。
 const Engine = (() => {
   let ctx = null, master = null, gains = null, worker = null, bufs = null, keepAlive = null, fallbackTimer = 0, analyser = null;
-  let src = null;          // { kind: 'song'|'free'|'preview', setlistId, songId, title, baseBpm, baseMix, bpm, beats, grid, dpb, kindM, ts, mix }
+  let src = null;          // { kind: 'song'|'free'|'preview', setlistId, songId, title, bpm, beats, grid, dpb, kindM, ts, mix }
   let active = false;      // 再生中（UI 上）
   let scheduling = false;  // まだ先のノートを予約するか
   let anchorTime = 0, anchorIdx = 0, idx = 0, stopIdx = Infinity, endTimer = 0;
@@ -805,7 +815,7 @@ function render() {
   $('#setlistView').hidden = ui.view !== 'setlist';
   $('#freeView').hidden = ui.view !== 'free';
   $('#dock').hidden = ui.view !== 'setlist';
-  document.body.classList.toggle('no-dock', ui.view !== 'setlist');
+  $('#freeBar').hidden = ui.view !== 'free';
   $('#slTitle').textContent = sl.name;
   $('#slMeta').textContent = `${sl.songs.length}曲`;
   $('#slTools').hidden = !ui.edit;
@@ -843,7 +853,7 @@ function renderList() {
         <span class="song-no num">${i + 1}</span>
         <span class="song-body">
           <span class="song-title">${esc(s.title)}</span>
-          <span class="song-meta">${meterChips(s)}${s.note ? `<span class="song-note">${esc(s.note)}</span>` : ''}</span>
+          <span class="song-meta">${drafts.has(dkey(sl.id, s.id)) ? '<span class="chip draft">未保存</span>' : ''}${meterChips(s)}${s.note ? `<span class="song-note">${esc(s.note)}</span>` : ''}</span>
         </span>
         ${ui.edit ? `<span class="edit-mark">${ICON.edit}</span>` : ''}
         <span class="song-bpm">${s.bpm}<small>BPM</small></span>
@@ -883,45 +893,74 @@ function baseIndex() {
   return sl.songs.findIndex(s => s.id === id);
 }
 
-function renderDock() {
-  const sl = cur(), src = Engine.src;
-  const live = Engine.active && src && src.kind !== 'preview';
-  let title, p, base = null, kind = 'song';
-  if (live) {
-    p = src; kind = src.kind;
-    title = kind === 'free' ? 'フリー' : src.title;
-    if (kind === 'song') base = src.baseBpm;
-  } else {
-    const s = sl.songs.find(x => x.id === ui.cuedId);
-    if (s) { title = s.title; p = toEngine(s); }
-    else { title = '曲を追加してください'; p = toEngine({ bpm: null, ts: '4/4', mix: defaultMix('4/4') }); }
+/* ---------- 下書き（未保存の変更） ----------
+   プレイヤーでの ± とミキサー操作は、曲ごとの「下書き」に入る。曲に書くのは「保存」を押したときだけ。
+   止めても曲を移っても下書きは消えない（黙って失われない）。保存・戻すはプレイヤー上のバーから。
+   ※ 下書きはメモリだけに持つ（再読み込みで消える）。曲の編集画面で保存した場合はそちらが優先 */
+const drafts = new Map(); // `${setlistId}:${songId}` → { bpm, mix }
+const dkey = (setlistId, songId) => `${setlistId}:${songId}`;
+const effOf = (setlistId, song) => ({ ...song, ...(drafts.get(dkey(setlistId, song.id)) || {}) });
+function setDraft(setlistId, song, patch) {
+  const k = dkey(setlistId, song.id);
+  const d = { bpm: song.bpm, mix: { ...song.mix }, ...(drafts.get(k) || {}), ...patch };
+  if (d.bpm === song.bpm && mixEq(d.mix, song.mix)) drafts.delete(k); else drafts.set(k, d);
+}
+function dropDrafts(setlistId, songId) {
+  if (songId) { drafts.delete(dkey(setlistId, songId)); return; }
+  for (const k of [...drafts.keys()]) if (k.startsWith(`${setlistId}:`)) drafts.delete(k);
+}
+// プレイヤーが対象にしている曲：再生中の曲（別のセトリでも）か、選択中の曲
+function dockTarget() {
+  const src = Engine.src;
+  if (Engine.active && src?.kind === 'song') {
+    const song = findSong(src.setlistId, src.songId);
+    if (song) return { setlistId: src.setlistId, song };
   }
+  const s = cur().songs.find(x => x.id === ui.cuedId);
+  return s ? { setlistId: cur().id, song: s } : null;
+}
+const liveSrc = () => (Engine.active && Engine.src && Engine.src.kind !== 'preview' ? Engine.src : null);
+// プレイヤーのミキサーが今表示している値（停止中は選択中の曲の下書き込みの値）
+function dockMix() {
+  const src = liveSrc();
+  if (src) return src.mix;
+  const t = dockTarget();
+  return t ? effOf(t.setlistId, t.song).mix : null;
+}
+
+function renderDock() {
+  const sl = cur(), src = liveSrc(), t = dockTarget();
+  let title, p, kind = 'song';
+  if (src && src.kind === 'free') { p = src; kind = 'free'; title = 'フリー'; }
+  else if (src) { p = src; title = src.title; }
+  else if (t) { p = toEngine(effOf(t.setlistId, t.song)); title = t.song.title; }
+  else { title = '曲を追加してください'; p = toEngine({ bpm: null, ts: '4/4', mix: defaultMix('4/4') }); }
+  const draft = kind === 'song' && t ? drafts.get(dkey(t.setlistId, t.song.id)) : null;
   const i = baseIndex();
   const next = i >= 0 ? sl.songs[i + 1] : null;
-  const parts = [meterText(p)];
-  if (S.settings.countBars && kind === 'song') parts.push(COUNT_MODES[S.settings.countBars].label);
-  if (kind === 'song' && next) parts.push(`次: ${next.title}`);
-  else if (kind === 'song' && i >= 0 && i === sl.songs.length - 1) parts.push('最後の曲');
+  // 置いて見る距離で読むもの：曲名・BPM・次の曲・拍ランプ
+  const parts = [];
+  if (kind === 'song') {
+    if (next) parts.push(`次: ${next.title}`);
+    else if (i >= 0 && i === sl.songs.length - 1) parts.push('最後の曲');
+    if (S.settings.countBars) parts.push(COUNT_MODES[S.settings.countBars].label);
+  } else parts.push(meterText(p));
   $('#dockTitle').textContent = title;
   $('#dockSub').textContent = parts.join('　');
-  // ± で変えたテンポは一時的。曲と違うときだけ保存ボタンを出す（ミキサーは触った時点で曲に保存される）
-  const bpmChanged = base != null && p.bpm !== base;
   const val = $('#dockBpm');
   const shown = p.bpm ?? '---';
   if (val.dataset.v !== String(shown)) { val.dataset.v = shown; val.innerHTML = seg7(shown, 3); }
   val.setAttribute('aria-label', p.bpm ? `${p.bpm} BPM` : 'BPM なし');
-  val.classList.toggle('changed', bpmChanged);
-  const saveBtn = $('#saveBpm');
-  saveBtn.hidden = !bpmChanged;
-  if (bpmChanged) saveBtn.textContent = `${p.bpm} BPM を保存`;
-  // ミキサーは停止中も操作できる（曲がない時だけ無効）
-  renderMixer($('#dockMixer'), p.ts, p.mix, !live && !sl.songs.some(x => x.id === ui.cuedId));
-  $('#bpmMinus').disabled = $('#bpmPlus').disabled = !live;
+  val.classList.toggle('changed', !!draft && draft.bpm !== t.song.bpm);
+  $('#dockUnit').textContent = `BPM・${p.ts}`;
+  $('#draftBar').hidden = !draft;
+  renderMixer($('#dockMixer'), p.ts, p.mix, !src && !t);
+  $('#bpmMinus').disabled = $('#bpmPlus').disabled = !src && !t;
   const play = $('#playBtn');
-  play.classList.toggle('stop', !!live);
-  play.innerHTML = live ? `${ICON.stop}<span>停止</span>` : `${ICON.play}<span>再生</span>`;
-  play.setAttribute('aria-label', live ? '停止' : '再生');
-  play.disabled = !live && !sl.songs.length;
+  play.classList.toggle('stop', !!src);
+  play.innerHTML = src ? `${ICON.stop}<span>停止</span>` : `${ICON.play}<span>再生</span>`;
+  play.setAttribute('aria-label', src ? '停止' : '再生');
+  play.disabled = !src && !sl.songs.length;
   $('#prevBtn').disabled = !(i > 0);
   $('#nextBtn').disabled = !(i >= 0 && i < sl.songs.length - 1);
   ensureDots($('#dockBeats'), p);
@@ -934,44 +973,41 @@ function renderFree() {
   const live = active && src?.kind !== 'preview';
   const btn = $('#freePlay');
   btn.classList.toggle('stop', !!live);
-  btn.innerHTML = live ? `${ICON.stop}<span>停止</span>` : `${ICON.play}<span>スタート</span>`;
+  btn.innerHTML = live ? `${ICON.stop}<span>停止</span>` : `${ICON.play}<span>再生</span>`;
   const now = $('#freeNow');
   now.hidden = !(active && src?.kind === 'song');
   if (!now.hidden) now.textContent = `再生中: ${src.title}（${src.bpm} BPM）`;
   ensureDots($('#freeBeats'), active && src?.kind === 'free' ? src : toEngine(S.free));
 }
 
+// 下端に固定したバー（セトリ＝プレイヤー、フリー＝再生ボタン）の高さぶん本文に余白を取る
 function measureDock() {
-  const d = $('#dock');
-  document.documentElement.style.setProperty('--dock-h', d.hidden ? '0px' : d.offsetHeight + 'px');
+  const bar = ui.view === 'free' ? $('#freeBar') : $('#dock');
+  document.documentElement.style.setProperty('--dock-h', bar.hidden ? '0px' : bar.offsetHeight + 'px');
 }
 
 /* ================= 再生操作 ================= */
 function playSong(song, setlistId = cur().id) {
   ui.cuedId = song.id;
-  Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, baseBpm: song.bpm, baseMix: { ...song.mix }, ...toEngine(song) });
+  Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, ...toEngine(effOf(setlistId, song)) });
 }
-// ドックのミキサー操作：鳴っていれば即反映し、その曲（フリーならフリー設定）にそのまま保存する。停止中は選択中の曲を直接変更
+// プレイヤーのミキサー：下書きに入れ、鳴っていれば即反映（フリー再生中はフリー設定をそのまま更新）
 function setLiveMix(k, v) {
-  const src = Engine.src;
-  if (Engine.active && src && src.kind !== 'preview') {
-    Engine.setMix({ ...src.mix, [k]: v });
-    if (src.kind === 'free') { S.free.mix = { ...Engine.src.mix }; save(); renderFree(); return; }
-    const song = findSong(src.setlistId, src.songId);
-    if (song) { song.mix = { ...Engine.src.mix }; src.baseMix = { ...song.mix }; save(); renderList(); }
-    return;
-  }
-  const song = cur().songs.find(x => x.id === ui.cuedId);
-  if (!song) return;
-  song.mix = { ...song.mix, [k]: v };
-  save(); renderList(); renderDock();
+  const src = liveSrc();
+  if (src && src.kind === 'free') { Engine.setMix({ ...src.mix, [k]: v }); S.free.mix = { ...Engine.src.mix }; save(); renderFree(); return; }
+  const t = dockTarget();
+  if (!t) return;
+  const mix = { ...effOf(t.setlistId, t.song).mix, [k]: v };
+  setDraft(t.setlistId, t.song, { mix });
+  if (src) Engine.setMix(mix);
+  renderList(); renderDock();
 }
 function toggleSong(song) {
   if (playingSongId() === song.id) Engine.stop();
   else playSong(song);
 }
 function dockPlay() {
-  if (Engine.active && Engine.src?.kind !== 'preview') { Engine.stop(); return; }
+  if (liveSrc()) { Engine.stop(); return; }
   const sl = cur();
   const s = sl.songs.find(x => x.id === ui.cuedId) || sl.songs[0];
   if (s) playSong(s);
@@ -991,23 +1027,37 @@ function scrollToSong(id) {
   const li = $(`#songList li[data-id="${id}"]`);
   if (li) li.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
+// ± ：停止中も使える。下書きに入れ、鳴っていれば即反映
 function nudge(d) {
   if (ui.view === 'free') { freeTempo?.setBpm(S.free.bpm + d); return; }
-  if (Engine.active && Engine.src && Engine.src.kind !== 'preview') Engine.setBpm(Engine.src.bpm + d);
+  const src = liveSrc();
+  if (src && src.kind === 'free') { Engine.setBpm(src.bpm + d); S.free.bpm = Engine.src.bpm; save(); renderFree(); return; }
+  const t = dockTarget();
+  if (!t) return;
+  const bpm = clampBpm(effOf(t.setlistId, t.song).bpm + d);
+  setDraft(t.setlistId, t.song, { bpm });
+  if (src) Engine.setBpm(bpm);
+  renderList(); renderDock();
 }
-function saveNudge() {
-  const src = Engine.src;
-  if (!src || src.kind !== 'song') return;
-  const song = findSong(src.setlistId, src.songId);
-  if (!song) return;
-  song.bpm = src.bpm;
-  src.baseBpm = src.bpm;
+function saveDraft() {
+  const t = dockTarget();
+  const d = t && drafts.get(dkey(t.setlistId, t.song.id));
+  if (!d) return;
+  t.song.bpm = d.bpm; t.song.mix = { ...d.mix };
+  drafts.delete(dkey(t.setlistId, t.song.id));
   save(); renderList(); renderDock();
-  toast(`「${song.title}」を ${song.bpm} BPM で保存しました`);
+  toast(`「${t.song.title}」に保存しました`);
+}
+function revertDraft() {
+  const t = dockTarget();
+  if (!t) return;
+  drafts.delete(dkey(t.setlistId, t.song.id));
+  if (Engine.active && Engine.src?.kind === 'song' && Engine.src.songId === t.song.id) { Engine.setBpm(t.song.bpm); Engine.setMix(t.song.mix); }
+  renderList(); renderDock();
 }
 function freeToggle() {
   freeTempo?.flush();
-  if (Engine.active && Engine.src?.kind !== 'preview') { Engine.stop(); return; }
+  if (liveSrc()) { Engine.stop(); return; }
   Engine.start({ kind: 'free', title: 'フリー', ...toEngine(S.free) });
 }
 function showSetlist(id) {
@@ -1289,7 +1339,9 @@ function dialog({ title, message = '', input = null, ok = 'OK', danger = false }
 function openEditor(songId, preset = null) {
   const sl = cur();
   const orig = songId ? sl.songs.find(s => s.id === songId) : null;
-  const draft = orig ? { ...orig, mix: { ...orig.mix } } : { id: uid(), title: '', bpm: 120, ts: '4/4', mix: defaultMix('4/4'), note: '', ...(preset || {}) };
+  // プレイヤーでの未保存の変更があれば、それを含めた値から編集を始める（保存すると下書きは曲に取り込まれる）
+  const base = orig ? effOf(sl.id, orig) : null;
+  const draft = orig ? { ...base, mix: { ...base.mix } } : { id: uid(), title: '', bpm: 120, ts: '4/4', mix: defaultMix('4/4'), note: '', ...(preset || {}) };
   const el = openSheet(`
     <div class="sheet-head"><button class="text-btn" data-x="cancel">キャンセル</button><h2>${orig ? '曲を編集' : `「${esc(sl.name)}」に追加`}</h2><button class="text-btn primary" data-x="save">保存</button></div>
     <div class="stack">
@@ -1329,7 +1381,7 @@ function openEditor(songId, preset = null) {
     draft.title = titleIn.value.trim().slice(0, 80) || '無題';
     draft.note = noteIn.value.trim().slice(0, 140);
     let target = orig;
-    if (orig) Object.assign(orig, draft);
+    if (orig) { Object.assign(orig, draft); dropDrafts(sl.id, orig.id); }
     else { target = { ...draft }; sl.songs.push(target); ui.cuedId = target.id; }
     save();
     const src = Engine.src;
@@ -1338,7 +1390,7 @@ function openEditor(songId, preset = null) {
     if (wasPlayingThis) {
       if (src.ts !== target.ts) playSong(target, sl.id); // 拍子が変わったら頭から
       else {
-        src.title = target.title; src.baseBpm = target.bpm; src.baseMix = { ...target.mix };
+        src.title = target.title;
         Engine.setBpm(target.bpm);
         Engine.setMix(target.mix);
       }
@@ -1351,6 +1403,7 @@ function openEditor(songId, preset = null) {
     const i = sl.songs.indexOf(orig);
     if (i < 0) return;
     sl.songs.splice(i, 1);
+    dropDrafts(sl.id, orig.id);
     if (playingSongId() === orig.id) Engine.stop();
     save(); closeSheet(); render();
     toast(`「${orig.title}」を削除しました`, { action: '元に戻す', onAction: () => {
@@ -1477,6 +1530,7 @@ async function setlistAction(x) {
     if (!ok) return;
     if (Engine.active && Engine.src?.setlistId === sl.id) Engine.stop();
     S.setlists.splice(i, 1);
+    dropDrafts(sl.id);
     if (!S.setlists.length) S.setlists.push({ id: uid(), name: 'セトリ1', songs: [] });
     S.currentId = S.setlists[Math.max(0, i - 1)].id;
     ui.cuedId = null; ui.edit = false;
@@ -1681,8 +1735,9 @@ $('#prevBtn').addEventListener('click', () => step(-1));
 $('#nextBtn').addEventListener('click', () => step(1));
 holdRepeat($('#bpmMinus'), () => nudge(-1));
 holdRepeat($('#bpmPlus'), () => nudge(1));
-$('#saveBpm').addEventListener('click', saveNudge);
-attachMixer($('#dockMixer'), () => Engine.src?.mix, setLiveMix);
+$('#draftSave').addEventListener('click', saveDraft);
+$('#draftRevert').addEventListener('click', revertDraft);
+attachMixer($('#dockMixer'), dockMix, setLiveMix);
 $('#freePlay').addEventListener('click', freeToggle);
 $('#freeAdd').addEventListener('click', () => { freeTempo.flush(); openEditor(null, { bpm: S.free.bpm, ts: S.free.ts, mix: { ...S.free.mix } }); });
 
@@ -1699,7 +1754,9 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-1); }
 });
 
-new ResizeObserver(measureDock).observe($('#dock'));
+const barObserver = new ResizeObserver(measureDock);
+barObserver.observe($('#dock'));
+barObserver.observe($('#freeBar'));
 window.addEventListener('hashchange', handleImportHash);
 
 /* ================= 起動 ================= */
