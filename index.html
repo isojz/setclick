@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#16181c">
+<meta name="theme-color" content="#0f1013">
 <meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -15,47 +15,45 @@
 <link rel="icon" type="image/png" href="./icon-192.png">
 <title>SetClick</title>
 <style>
-/* SetClick スタジオ機材風テーマ（v1.5〜）。戻す場合は git tag v1.4.0 */
+/* SetClick スタジオ機材テーマ v1.6
+   階層は3つだけ：パネル＝平ら／触る部品（再生系・ノブ・±・TAP・ON/OFF）＝浮く／表示窓（液晶・入力）＝沈む
+   文字 11/13/16/18/24px の5段階、角丸 6/10/16px の3種、タップ領域は最小 44px
+   戻し先：git tag v1.5.0（レビュー前の機材風）、v1.4.0（平らなデザイン） */
 :root{
-  --bg:#0c0d10;
-  --panel-1:#252930;
-  --panel-2:#1b1e23;
-  --well:#0f1114;
-  --screen:#0a0d0b;
-  --line:#2d3139;
+  --bg:#0f1013;
+  --panel:#191b1f;
+  --panel-2:#22252a;
+  --line:#2e323a;
   --edge:#08090b;
   --text:#e9ebef;
-  --muted:#9aa1ad;
-  --dim:#626975;
+  --muted:#a0a7b3;
+  --dim:#6f7682;
   --accent:#ff6b3d;
   --accent-ink:#1a0b05;
   --led:#ffb23e;
-  --led-glow:rgba(255,178,62,.55);
+  --led-glow:rgba(255,178,62,.5);
   --green:#46e27f;
   --red:#ff4f3c;
-  --warn:#ffb23e;
   --danger:#ff5a5f;
-  --r-lg:14px;--r-md:10px;
+  --fs-xs:11px;--fs-sm:13px;--fs-md:16px;--fs-lg:18px;--fs-xl:24px;
+  --r-sm:6px;--r-md:10px;--r-lg:16px;
+  --tap:44px;
+  --raised:linear-gradient(180deg,#353940,#272a30);
+  --raised-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 2px 0 #07080a,0 3px 6px rgba(0,0,0,.35);
+  --pressed-shadow:inset 0 2px 5px rgba(0,0,0,.6);
+  --sunken:inset 0 2px 8px rgba(0,0,0,.8);
+  --screen:#0a0c0b;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
   --col:640px;
   --dock-h:0px;
-  --hw:linear-gradient(180deg,#30343b,#22252b);
-  --hw-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 2px 0 #090a0c,0 3px 8px rgba(0,0,0,.35);
-  --hw-press:inset 0 2px 5px rgba(0,0,0,.55),0 0 0 #090a0c;
-  --panel:linear-gradient(180deg,var(--panel-1),var(--panel-2));
-  --panel-shadow:inset 0 1px 0 rgba(255,255,255,.06),inset 0 -1px 0 rgba(0,0,0,.35),0 4px 14px rgba(0,0,0,.35);
   --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
-body{margin:0;min-height:100dvh;color:var(--text);
-  background:radial-gradient(1000px 500px at 50% -120px,#1f232a 0%,transparent 70%),var(--bg);
+body{margin:0;min-height:100dvh;background:var(--bg);color:var(--text);
   font-family:system-ui,-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;
-  font-size:15px;line-height:1.5;overscroll-behavior-y:none;-webkit-font-smoothing:antialiased}
-/* うっすら金属のザラつき */
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.05;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  font-size:var(--fs-md);line-height:1.5;overscroll-behavior-y:none;-webkit-font-smoothing:antialiased}
 body.sheet-open{overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 button{background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -65,249 +63,219 @@ button:disabled{opacity:.35;cursor:default}
 svg{display:block;flex-shrink:0}
 [hidden]{display:none!important}
 
-/* ---------- 共通パーツ：ハードウェアのキー・液晶・刻印 ---------- */
-.pill-btn,.icon-btn,.chip-tab,.sl-tools button,.nudge,.ctl,.step,.meters button,.ghost-btn,.add-btn,.seg button,.song-tools button{
-  background:var(--hw);border:1px solid var(--edge);box-shadow:var(--hw-shadow);color:var(--text);transition:transform .05s,box-shadow .05s}
-.pill-btn:active,.icon-btn:active,.chip-tab:active,.sl-tools button:active,.nudge:active:not(:disabled),.ctl:active:not(:disabled),.step:active,
-.meters button:active,.ghost-btn:active,.add-btn:active,.seg button:active,.song-tools button:active:not(:disabled),.big-play:active,.fill-btn:active{
-  transform:translateY(2px);box-shadow:var(--hw-press)}
-.lcd{background:linear-gradient(180deg,#090c0a,#0d110e);border:1px solid #000;border-radius:10px;
-  box-shadow:inset 0 2px 10px rgba(0,0,0,.85),inset 0 0 0 1px rgba(255,178,62,.05),0 1px 0 rgba(255,255,255,.06);color:var(--led)}
+/* ---------- 3階層 ---------- */
+/* 浮く：実際に演奏中に触る部品だけ */
+.ctl,.nudge,.tap-pad,.mute{background:var(--raised);border:1px solid var(--edge);box-shadow:var(--raised-shadow);color:var(--text);transition:transform .05s,box-shadow .05s}
+.ctl:active:not(:disabled),.nudge:active:not(:disabled),.tap-pad:active,.mute:active:not(:disabled),.big-play:active,.fill-btn:active{transform:translateY(2px);box-shadow:var(--pressed-shadow)}
+/* 平ら：それ以外のボタン・選択肢は細い罫線だけ */
+.pill-btn,.icon-btn,.chip-tab,.sl-tools button,.step,.meters button,.ghost-btn,.add-btn,.seg button,.song-tools button{
+  min-height:var(--tap);background:transparent;border:1px solid var(--line);border-radius:var(--r-md);color:var(--muted);font-weight:700}
+.pill-btn:active,.icon-btn:active,.chip-tab:active,.sl-tools button:active,.step:active,.meters button:active,.ghost-btn:active,.add-btn:active,.seg button:active,
+.song-tools button:active:not(:disabled){background:rgba(255,255,255,.05)}
+/* 選択中はアンバーの下線で統一 */
+.pill-btn[aria-pressed="true"],.chip-tab[aria-selected="true"],.meters button[aria-pressed="true"],.seg button[aria-pressed="true"],.ghost-btn.on{
+  color:var(--led);border-color:rgba(255,178,62,.5);box-shadow:inset 0 -2px 0 var(--led)}
+/* 沈む：表示窓 */
+.lcd{background:var(--screen);border:1px solid #000;border-radius:var(--r-md);box-shadow:var(--sunken);color:var(--led)}
 .seg7{height:100%;width:auto;filter:drop-shadow(0 0 3px var(--led-glow))}
 .seg7 .on{fill:currentColor}
 .seg7 .off{fill:currentColor;opacity:.07}
-.engrave{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
 
 /* ---------- ヘッダ ---------- */
-.top{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#1e2126,#16181c);
-  padding:calc(var(--safe-t) + 10px) 0 10px;border-bottom:1px solid #060708;box-shadow:0 1px 0 rgba(255,255,255,.04),0 6px 16px rgba(0,0,0,.4)}
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(var(--safe-t) + 8px) 0 8px}
 .top-inner,.chips{max-width:var(--col);margin:0 auto}
 .top-inner{display:flex;align-items:center;gap:8px;padding:0 16px}
-.brand{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
-.brand-name{display:block;font-weight:900;letter-spacing:.22em;font-size:14px;text-transform:uppercase;line-height:1.2}
-.brand-sub{display:block;font-size:8.5px;letter-spacing:.28em;color:var(--dim);font-weight:900}
-.brand-led{width:7px;height:7px;border-radius:50%;background:#3a1a12;box-shadow:inset 0 1px 1px rgba(0,0,0,.6);flex-shrink:0}
-body.playing .brand-led{background:var(--red);box-shadow:0 0 8px 2px rgba(255,79,60,.6)}
-.pill-btn{height:40px;padding:0 14px;border-radius:var(--r-md);font-size:13px;font-weight:900;flex-shrink:0}
-.pill-btn[aria-pressed="true"]{color:var(--led);text-shadow:0 0 6px var(--led-glow);box-shadow:var(--hw-press);transform:translateY(2px)}
-.icon-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:var(--r-md);color:var(--muted);flex-shrink:0}
-.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 16px 4px;scroll-padding:0 16px}
+.brand{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-weight:800;font-size:var(--fs-lg)}
+.pill-btn{padding:0 16px;font-size:var(--fs-sm);flex-shrink:0}
+.icon-btn{width:var(--tap);display:grid;place-items:center;flex-shrink:0}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 16px 0;scroll-padding:0 16px}
 .chips::-webkit-scrollbar{display:none}
-.chip-tab{flex-shrink:0;height:36px;padding:0 13px;border-radius:8px;font-size:13px;font-weight:900;color:var(--muted);
-  white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
-.chip-tab .n{font-size:11px;opacity:.6;font-weight:700;font-family:var(--mono)}
-.chip-tab[aria-selected="true"]{color:var(--led);text-shadow:0 0 6px var(--led-glow);box-shadow:var(--hw-press),inset 0 -2px 0 var(--led);transform:translateY(2px)}
-.chip-tab.add{color:var(--dim);background:transparent;box-shadow:none;border:1px dashed #3a3f47}
-.chip-sep{flex-shrink:0;width:1px;background:#07080a;box-shadow:1px 0 0 rgba(255,255,255,.05);margin:6px 3px}
+.chip-tab{flex-shrink:0;padding:0 14px;font-size:var(--fs-sm);border-radius:var(--r-sm);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:7px}
+.chip-tab .n{font-size:var(--fs-xs);opacity:.6;font-family:var(--mono)}
+.chip-tab.add{border-style:dashed;color:var(--dim)}
+.chip-sep{flex-shrink:0;width:1px;background:var(--line);margin:8px 2px}
 
 /* ---------- 本文 ---------- */
 main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 24px)}
 body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
-.sl-head{margin:2px 2px 12px}
-.sl-over{display:block;margin-bottom:1px}
+.sl-head{margin:0 2px 12px}
 .sl-title-row{display:flex;align-items:baseline;gap:10px}
-.sl-title{margin:0;font-size:22px;font-weight:900;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sl-meta{font-size:12px;color:var(--dim);font-weight:800;flex-shrink:0;font-family:var(--mono)}
+.sl-title{margin:0;font-size:var(--fs-xl);font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl-meta{font-size:var(--fs-sm);color:var(--dim);flex-shrink:0}
 .sl-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
-.sl-tools button{padding:10px 4px;border-radius:8px;font-size:12px;font-weight:800}
-.sl-tools .del{color:var(--danger)}
-.songs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.song{position:relative;display:flex;align-items:stretch;background:var(--panel);border:1px solid var(--edge);border-radius:12px;overflow:hidden;
-  box-shadow:var(--panel-shadow);transition:box-shadow .15s;scroll-margin-top:150px;scroll-margin-bottom:calc(var(--dock-h) + 12px)}
-.song::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:#30343c}
-.song-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:9px 10px 9px 14px;text-align:left;min-height:72px}
-.song-main:active{background:rgba(0,0,0,.18)}
-.song-no{width:22px;flex-shrink:0;font-size:12px;color:var(--dim);font-weight:800;text-align:center;font-family:var(--mono)}
+.sl-tools button{font-size:var(--fs-sm)}
+.sl-danger{margin-top:32px}
+.songs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.song{position:relative;display:flex;align-items:stretch;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
+  scroll-margin-top:150px;scroll-margin-bottom:calc(var(--dock-h) + 12px)}
+.song-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 12px;text-align:left;min-height:68px}
+.song-main:active{background:var(--panel-2)}
+.song-no{width:22px;flex-shrink:0;font-size:var(--fs-sm);color:var(--dim);text-align:center;font-family:var(--mono)}
 .song-body{flex:1;min-width:0}
-.song-title{display:block;font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.song-meta{display:flex;gap:6px;align-items:center;margin-top:4px;font-size:12px;color:var(--muted);min-width:0}
-.chip{flex-shrink:0;padding:0 6px;border-radius:4px;border:1px solid #3a3f47;color:var(--muted);font-size:10.5px;font-weight:800;line-height:17px;font-family:var(--mono)}
+.song-title{display:block;font-weight:700;font-size:var(--fs-lg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.song-meta{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:var(--fs-sm);color:var(--muted);min-width:0}
+.chip{flex-shrink:0;padding:0 6px;border-radius:var(--r-sm);border:1px solid var(--line);color:var(--muted);font-size:var(--fs-xs);line-height:18px;font-family:var(--mono)}
 .song-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.song-bpm{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:7px 8px 3px;min-width:74px}
-.song-bpm .seg7{height:26px;opacity:.75}
-.song-bpm small{font-size:8.5px;font-weight:900;letter-spacing:.2em;opacity:.5;margin-top:2px}
-.song.cued::before{background:#7a808a}
-.song.playing{box-shadow:var(--panel-shadow),0 0 0 1px rgba(255,178,62,.45),0 0 22px rgba(255,178,62,.12)}
-.song.playing::before{background:var(--led);box-shadow:0 0 8px var(--led-glow)}
-.song.playing .song-no{color:var(--led)}
-.song.playing .song-bpm .seg7{opacity:1}
-.songs.editing .song{box-shadow:var(--panel-shadow),inset 0 0 0 1px #3a3f47}
+.song-bpm{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-xl);font-weight:700;line-height:1}
+.song-bpm small{font-size:var(--fs-xs);color:var(--dim);margin-top:4px;font-weight:600;font-family:inherit}
+.song.cued{border-color:#4a4f58}
+.song.playing{border-color:rgba(255,178,62,.6)}
+.song.playing::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--led)}
+.song.playing .song-no,.song.playing .song-bpm{color:var(--led)}
+.songs.editing .song{border-style:dashed}
 .edit-mark{color:var(--dim)}
 .song-tools{display:flex;align-items:center;gap:4px;padding-right:8px}
-.song-tools button{width:38px;height:40px;display:grid;place-items:center;color:var(--muted);border-radius:8px}
+.song-tools button{width:var(--tap);display:grid;place-items:center}
 .add-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
-.add-btn{padding:15px;border-radius:12px;color:var(--muted);font-weight:800}
-.add-btn.sub{padding:15px 18px;font-size:13px}
-.empty{text-align:center;padding:30px 16px 16px}
-.empty-title{margin:0;font-weight:900;font-size:17px}
-.hint{font-size:12px;color:var(--dim);margin:4px 0 0;line-height:1.6}
+.add-btn{padding:0 16px;font-size:var(--fs-sm)}
+.empty{text-align:center;padding:32px 16px 16px;color:var(--muted)}
+.empty-title{margin:0;font-weight:700;font-size:var(--fs-md)}
+.hint{font-size:var(--fs-sm);color:var(--dim);margin:6px 0 0;line-height:1.6}
 .center{text-align:center}
 .kbd-only{display:none}
 @media (hover:hover) and (pointer:fine){.kbd-only{display:block}}
 
-/* ---------- ビート LED ---------- */
+/* ---------- 拍の LED ---------- */
 .beats{display:flex;justify-content:center;flex-wrap:wrap;gap:10px}
 .beats span{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   background:radial-gradient(circle at 35% 35%,#3b4048,#15171b 70%);box-shadow:0 0 0 2px #08090b,inset 0 1px 2px rgba(0,0,0,.7)}
 .beats span.grp{box-shadow:0 0 0 2px #08090b,0 0 0 3.5px #3a3f47}
-.beats span.on{background:radial-gradient(circle at 35% 35%,#d9ffe6,var(--green) 55%,#1c6e3d);box-shadow:0 0 0 2px #08090b,0 0 10px 2px rgba(70,226,127,.55)}
-.beats span.acc.on{background:radial-gradient(circle at 35% 35%,#ffd6cc,var(--red) 55%,#7e1a10);box-shadow:0 0 0 2px #08090b,0 0 12px 3px rgba(255,79,60,.6)}
+.beats span.on{background:radial-gradient(circle at 35% 35%,#d9ffe6,var(--green) 55%,#1c6e3d);box-shadow:0 0 0 2px #08090b,0 0 10px 2px rgba(70,226,127,.5)}
+.beats span.acc.on{background:radial-gradient(circle at 35% 35%,#ffd6cc,var(--red) 55%,#7e1a10);box-shadow:0 0 0 2px #08090b,0 0 12px 3px rgba(255,79,60,.55)}
 .beats.big{gap:14px;padding:6px 0}
 .beats.big span{width:22px;height:22px}
 
 /* ---------- ドック（プレイヤー） ---------- */
-.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;border-top:1px solid #050607;
-  background:
-    radial-gradient(circle at 12px 12px,#6f757f 0 2px,#15171b 2.6px,transparent 3.3px),
-    radial-gradient(circle at calc(100% - 12px) 12px,#6f757f 0 2px,#15171b 2.6px,transparent 3.3px),
-    linear-gradient(180deg,#262a31,#1a1c21);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 -8px 24px rgba(0,0,0,.45);padding:12px 16px calc(var(--safe-b) + 12px)}
-.dock-inner{max-width:var(--col);margin:0 auto}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px calc(var(--safe-b) + 10px)}
+.dock-inner{position:relative;max-width:var(--col);margin:0 auto}
 .dock-row{display:flex;align-items:stretch;gap:8px;margin-top:10px}
-.dock-lcd{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px}
+.nudge{width:var(--tap);border-radius:var(--r-md);display:grid;place-items:center;font-size:var(--fs-xl);font-weight:500}
+.dock-lcd{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;min-height:64px}
 .dock-info{flex:1;min-width:0}
-.dock-title{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 6px var(--led-glow)}
-.dock-sub{font-size:11.5px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-title{font-weight:700;font-size:var(--fs-lg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-sub{font-size:var(--fs-xs);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bpm-box{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
-.bpm-box .val{display:block;height:38px}
+.bpm-box .val{display:block;height:36px}
 .bpm-box .val.changed{color:#ff7a45}
-.bpm-box .val.changed .seg7{filter:drop-shadow(0 0 3px rgba(255,122,69,.6))}
-.bpm-box .unit{font-size:8.5px;font-weight:900;letter-spacing:.22em;opacity:.55;height:16px;line-height:16px}
-.save-bpm{font-size:10.5px;font-weight:900;color:var(--led);padding:0 8px;height:16px;line-height:14px;border:1px solid var(--led);border-radius:4px;
-  text-shadow:0 0 6px var(--led-glow);box-shadow:0 0 8px rgba(255,178,62,.25)}
-.nudges{display:flex;flex-direction:column;gap:6px}
-.nudge{flex:1;width:40px;min-height:28px;border-radius:8px;display:grid;place-items:center;font-size:18px;font-weight:900;color:var(--muted)}
+.bpm-box .unit{font-size:var(--fs-xs);opacity:.6;line-height:1;margin-top:5px}
+/* 微調整したテンポの保存：ドックの上に浮かぶ大きめのボタン */
+.save-bpm{position:absolute;right:0;bottom:calc(100% + 20px);min-height:var(--tap);padding:0 18px;border-radius:var(--r-md);
+  background:var(--led);color:#1b1204;font-weight:800;font-size:var(--fs-sm);box-shadow:0 6px 18px rgba(0,0,0,.5)}
 .dock-mixer{margin-top:10px}
 .dock-controls{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;margin-top:10px}
-.ctl{height:54px;border-radius:12px;display:grid;place-items:center}
-.ctl.play,.big-play{background:linear-gradient(180deg,#ff8a5c,#e8552a);border:1px solid #5a1d0b;color:var(--accent-ink);font-weight:900;font-size:16px;letter-spacing:.06em;
-  display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 0 #3d1407,0 4px 14px rgba(255,107,61,.3)}
-.ctl.play.stop,.big-play.stop{background:linear-gradient(180deg,#30343b,#22252b);border-color:var(--edge);color:var(--red);text-shadow:0 0 8px rgba(255,79,60,.6);
-  box-shadow:var(--hw-press),0 0 0 1px rgba(255,79,60,.35)}
-.ctl.play.stop svg,.big-play.stop svg{filter:drop-shadow(0 0 4px rgba(255,79,60,.7))}
+.ctl{min-height:52px;border-radius:var(--r-md);display:grid;place-items:center}
+.ctl.play,.big-play{background:var(--accent);border:1px solid #6b240d;color:var(--accent-ink);font-weight:800;font-size:var(--fs-md);
+  display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 2px 0 #3d1407}
+.ctl.play.stop,.big-play.stop{background:var(--raised);border-color:var(--edge);color:var(--red);box-shadow:var(--pressed-shadow)}
 
 #flash{position:fixed;inset:0;pointer-events:none;z-index:25;background:var(--accent);opacity:0}
 
 /* ---------- フリー / テンポ操作 ---------- */
 #freeView{display:flex;flex-direction:column;align-items:stretch;gap:16px}
-.free-now{font-size:12px;text-align:center;padding:6px 10px}
+.free-now{font-size:var(--fs-sm);text-align:center;padding:8px 12px}
 .tempo{display:flex;flex-direction:column;gap:14px}
-.big-lcd{position:relative;padding:14px 12px 8px;display:flex;flex-direction:column;align-items:center}
-.lcd-digits{height:clamp(66px,22vw,100px)}
-.big-num{position:absolute;inset:0;width:100%;height:100%;opacity:0;background:var(--screen);border:0;border-radius:10px;text-align:center;
-  font:800 clamp(52px,17vw,80px)/1 var(--mono);color:var(--led);padding:0;margin:0;-moz-appearance:textfield;appearance:textfield}
+.big-lcd{position:relative;padding:14px 12px 10px;display:flex;flex-direction:column;align-items:center}
+.lcd-digits{height:clamp(64px,21vw,96px)}
+.big-num{position:absolute;inset:0;width:100%;height:100%;opacity:0;background:var(--screen);border:0;border-radius:var(--r-md);text-align:center;
+  font:700 56px/1 var(--mono);color:var(--led);padding:0;margin:0;-moz-appearance:textfield;appearance:textfield}
 .big-num::-webkit-outer-spin-button,.big-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.big-num:focus{opacity:1;outline:none;text-shadow:0 0 8px var(--led-glow)}
-.bpm-label{font-size:10px;letter-spacing:.2em;font-weight:900;opacity:.55;margin-top:6px;text-align:center}
+.big-num:focus{opacity:1;outline:none}
+.bpm-label{font-size:var(--fs-xs);opacity:.6;margin-top:6px;text-align:center}
 .stepper-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.step{height:46px;border-radius:10px;font-weight:900;color:var(--muted);font-family:var(--mono)}
-/* ハードウェアのフェーダー風スライダー */
-input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:36px;background:transparent;margin:0}
-input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:#07080a;box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:34px;margin-top:-13px;border-radius:5px;border:1px solid #0b0c0e;
-  background:linear-gradient(180deg,#eceff2,#a2a9b3 46%,#2a2d33 46%,#2a2d33 54%,#a2a9b3 54%,#e4e7eb);box-shadow:0 3px 6px rgba(0,0,0,.6)}
-input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:#07080a;box-shadow:inset 0 1px 3px rgba(0,0,0,.9)}
-input[type=range]::-moz-range-thumb{width:24px;height:34px;border-radius:5px;border:1px solid #0b0c0e;
-  background:linear-gradient(180deg,#eceff2,#a2a9b3 46%,#2a2d33 46%,#2a2d33 54%,#a2a9b3 54%,#e4e7eb);box-shadow:0 3px 6px rgba(0,0,0,.6)}
-.tap-pad{width:100%;height:78px;border-radius:14px;border:1px solid var(--edge);font-weight:900;letter-spacing:.3em;color:var(--muted);font-size:16px;
-  background:radial-gradient(120% 140% at 50% 0%,#33373e,#1c1f24);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -3px 8px rgba(0,0,0,.4),0 2px 0 #090a0c;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:color .1s,box-shadow .1s}
-.tap-pad .tap-hint{font-size:11px;letter-spacing:0;font-weight:700;color:var(--dim)}
-.tap-pad.hit{color:var(--led);text-shadow:0 0 10px var(--led-glow);box-shadow:inset 0 2px 8px rgba(0,0,0,.6),0 0 0 1px rgba(255,178,62,.6),0 0 18px rgba(255,178,62,.25)}
+.step{font-size:var(--fs-md);font-family:var(--mono);color:var(--text)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:var(--tap);background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#07080a;box-shadow:inset 0 1px 3px rgba(0,0,0,.9)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:32px;margin-top:-13px;border-radius:var(--r-sm);border:1px solid var(--edge);
+  background:linear-gradient(180deg,#dfe2e6,#9aa1ab);box-shadow:0 2px 4px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:#07080a}
+input[type=range]::-moz-range-thumb{width:22px;height:32px;border-radius:var(--r-sm);border:1px solid var(--edge);background:linear-gradient(180deg,#dfe2e6,#9aa1ab)}
+.tap-pad{width:100%;min-height:76px;border-radius:var(--r-lg);font-weight:800;letter-spacing:.2em;font-size:var(--fs-md)}
+.tap-pad.hit{color:var(--led);box-shadow:var(--pressed-shadow),0 0 0 1px rgba(255,178,62,.6)}
 .meters{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.meters button{height:40px;border-radius:8px;font-size:13px;font-weight:900;color:var(--muted);font-family:var(--mono)}
-.meters button[aria-pressed="true"],.seg button[aria-pressed="true"]{color:var(--led);text-shadow:0 0 6px var(--led-glow);box-shadow:var(--hw-press),inset 0 -2px 0 var(--led);transform:translateY(2px)}
+.meters button{font-size:var(--fs-sm);font-family:var(--mono);border-radius:var(--r-sm)}
 .seg{display:flex;gap:6px;width:100%}
-.seg button{flex:1;min-width:0;padding:10px 2px;border-radius:8px;font-size:13px;font-weight:800;color:var(--muted);white-space:nowrap}
-/* ミキサー（ノブ）。リングの色でレイヤーを見分ける */
-.mixer{display:grid;gap:6px}
-.knob-cell{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;--kc:var(--led)}
+.seg button{flex:1;min-width:0;padding:0 4px;font-size:var(--fs-sm);white-space:nowrap}
+/* ミキサー：ノブ（音量）＋その下の ON/OFF キー */
+.mixer{display:grid;gap:8px}
+.knob-cell{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;--kc:var(--led)}
 .knob-cell[data-k="accent"]{--kc:#ff5a3c}
 .knob-cell[data-k="beat"]{--kc:#e8ebf0}
 .knob-cell[data-k="e8"]{--kc:#ffb23e}
 .knob-cell[data-k="t3"]{--kc:#4fd1ff}
 .knob-cell[data-k="s16"]{--kc:#b58dff}
-.knob{width:68px;height:68px;touch-action:none;cursor:ns-resize;border-radius:50%}
+.knob{width:64px;height:64px;touch-action:none;cursor:ns-resize;border-radius:50%}
 .knob svg{width:100%;height:100%;overflow:visible}
 .k-arc-bg{fill:none;stroke:#07080a;stroke-width:6;stroke-linecap:round}
 .k-arc{fill:none;stroke:var(--kc);stroke-width:6;stroke-linecap:round}
 .k-ptr{stroke:#1d2025;stroke-width:3.6;stroke-linecap:round}
-.knob-label{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--dim);padding:2px 6px;border-radius:5px;white-space:nowrap;max-width:100%}
-.knob-label::before{content:"";width:6px;height:6px;border-radius:50%;background:#2a2d33;box-shadow:inset 0 1px 1px rgba(0,0,0,.6);flex-shrink:0}
-.knob-label[aria-pressed="true"]{color:var(--text)}
-.knob-label[aria-pressed="true"]::before{background:var(--kc);box-shadow:0 0 6px var(--kc)}
-.knob-val{font-size:10px;font-weight:800;color:var(--dim);font-family:var(--mono);margin-top:-2px}
-.mixer.compact .knob{width:46px;height:46px}
+.mute{width:100%;min-height:var(--tap);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:var(--fs-sm);font-weight:700;color:var(--dim);white-space:nowrap;padding:0 4px}
+.mute::before{content:"";width:7px;height:7px;border-radius:50%;background:#2a2d33;box-shadow:inset 0 1px 1px rgba(0,0,0,.6);flex-shrink:0}
+.mute[aria-pressed="true"]{color:var(--text)}
+.mute[aria-pressed="true"]::before{background:var(--kc);box-shadow:0 0 6px var(--kc)}
+.knob-val{font-size:var(--fs-xs);color:var(--dim);font-family:var(--mono);margin-top:-2px}
+.mixer.compact .knob{width:44px;height:44px}
 .mixer.compact .knob-val{display:none}
-.mixer.compact .knob-label{font-size:10px;padding:1px 3px;gap:4px}
+.mixer.compact .mute{font-size:var(--fs-xs);gap:5px}
 .mixer.disabled{opacity:.45}
 .mixer.disabled .knob{cursor:default}
 .field{display:block;width:100%;min-width:0}
-.field-label{font-size:11px;color:var(--dim);font-weight:900;letter-spacing:.14em;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.field-label span{letter-spacing:0;font-weight:700}
-.big-play{width:100%;height:62px;border-radius:14px;font-size:17px}
-.ghost-btn{width:100%;padding:13px;border-radius:var(--r-md);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px}
-.ghost-btn.on{color:var(--led);text-shadow:0 0 6px var(--led-glow);box-shadow:var(--hw-press),0 0 0 1px rgba(255,178,62,.4)}
-.danger-btn{width:100%;padding:13px;border-radius:var(--r-md);color:var(--danger);font-weight:800;border:1px solid rgba(255,90,95,.35);background:rgba(255,90,95,.05)}
+.field-label{font-size:var(--fs-sm);color:var(--muted);font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.field-label span{color:var(--dim);font-weight:500}
+.big-play{width:100%;min-height:56px;border-radius:var(--r-lg);font-size:var(--fs-lg)}
+.ghost-btn{width:100%;padding:0 14px;font-size:var(--fs-md);color:var(--text);display:flex;align-items:center;justify-content:center;gap:8px}
+.danger-btn{width:100%;min-height:var(--tap);border-radius:var(--r-md);color:var(--danger);font-weight:700;border:1px solid rgba(255,90,95,.35);background:transparent}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
 /* ---------- シート / ダイアログ ---------- */
 .sheet-root{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.65);animation:fade .18s ease}
 .sheet{position:relative;width:100%;max-width:var(--col);max-height:calc(100dvh - var(--safe-t) - 16px);overflow:auto;overscroll-behavior:contain;
-  background:linear-gradient(180deg,#23272d,#1a1c21);border:1px solid #050607;border-bottom:0;border-radius:18px 18px 0 0;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 -10px 30px rgba(0,0,0,.5);padding:6px 18px calc(var(--safe-b) + 22px);
-  animation:up .24s cubic-bezier(.2,.8,.2,1)}
-.sheet-grip{width:40px;height:5px;border-radius:9px;background:#07080a;box-shadow:0 1px 0 rgba(255,255,255,.06);margin:4px auto 10px}
-.sheet-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:16px}
-.sheet-head h2{margin:0;font-size:14px;text-align:center;letter-spacing:.12em;font-weight:900}
+  background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:var(--r-lg) var(--r-lg) 0 0;
+  box-shadow:0 -10px 30px rgba(0,0,0,.5);padding:6px 18px calc(var(--safe-b) + 22px);animation:up .24s cubic-bezier(.2,.8,.2,1)}
+.sheet-grip{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 6px}
+.sheet-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:12px}
+.sheet-head h2{margin:0;font-size:var(--fs-md);font-weight:800;text-align:center}
 .sheet-head > :first-child{justify-self:start}
 .sheet-head > :last-child{justify-self:end}
-.text-btn{padding:8px 4px;border-radius:8px;font-weight:800;color:var(--muted)}
-.text-btn.primary{color:var(--led);text-shadow:0 0 6px var(--led-glow)}
+.text-btn{min-height:var(--tap);padding:0 6px;border-radius:var(--r-sm);font-weight:700;color:var(--muted)}
+.text-btn.primary{color:var(--led)}
 .stack{display:flex;flex-direction:column;gap:20px}
-.input{width:100%;padding:12px 14px;border-radius:var(--r-md);background:var(--well);border:1px solid var(--edge);color:var(--text);font-size:16px;
-  box-shadow:inset 0 2px 6px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.05)}
-.input:focus{outline:none;border-color:rgba(255,178,62,.6);box-shadow:inset 0 2px 6px rgba(0,0,0,.6),0 0 0 3px rgba(255,178,62,.12)}
+.input{width:100%;min-height:var(--tap);padding:10px 14px;border-radius:var(--r-md);background:#0c0e11;border:1px solid var(--line);color:var(--text);font-size:var(--fs-md);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.5)}
+.input:focus{outline:none;border-color:rgba(255,178,62,.6)}
 textarea.input{resize:vertical;line-height:1.6}
-.dlg-title{margin:6px 0 6px;font-size:17px}
-.dlg-msg{margin:0 0 14px;color:var(--muted);font-size:14px}
+.dlg-title{margin:6px 0 6px;font-size:var(--fs-lg)}
+.dlg-msg{margin:0 0 14px;color:var(--muted);font-size:var(--fs-sm)}
 .dlg .input{margin:6px 0 14px}
 .dlg-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.fill-btn{padding:13px;border-radius:var(--r-md);font-weight:900;background:linear-gradient(180deg,#ff8a5c,#e8552a);border:1px solid #5a1d0b;color:var(--accent-ink);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 0 #3d1407}
-.fill-btn.danger{background:linear-gradient(180deg,#ff6f73,#d9363b);border-color:#4a0e10;color:#fff}
-.or{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px;font-weight:800}
-.or::before,.or::after{content:"";flex:1;height:1px;background:#07080a;box-shadow:0 1px 0 rgba(255,255,255,.05)}
-.parse-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
-.parse-list li{display:flex;gap:10px;padding:8px 12px;border-radius:8px;background:var(--well);box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
-.parse-list .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
-.parse-list .m{color:var(--muted);flex-shrink:0;font-size:12px}
+.fill-btn{min-height:var(--tap);border-radius:var(--r-md);font-weight:800;background:var(--accent);border:1px solid #6b240d;color:var(--accent-ink)}
+.fill-btn.danger{background:var(--danger);border-color:#4a0e10;color:#fff}
+.or{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:var(--fs-sm);font-weight:700}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.parse-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:var(--fs-sm)}
+.parse-list li{display:flex;gap:10px;padding:8px 12px;border-radius:var(--r-sm);background:#0c0e11}
+.parse-list .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.parse-list .m{color:var(--muted);flex-shrink:0}
 .parse-list .warn{color:var(--led)}
-.slider-row{display:grid;grid-template-columns:64px 1fr 42px;align-items:center;gap:10px;font-size:13px;font-weight:800}
-.slider-row .v{text-align:right;color:var(--led);font-size:12px;font-family:var(--mono)}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.toggle-row .t{font-weight:800;font-size:14px}
-/* LED 付きトグルスイッチ */
-.switch{width:54px;height:30px;border-radius:8px;position:relative;flex-shrink:0;background:var(--hw);border:1px solid var(--edge);box-shadow:var(--hw-shadow)}
-.switch::after{content:"";position:absolute;top:50%;left:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#2a2d33;
-  box-shadow:inset 0 1px 1px rgba(0,0,0,.6);transition:background .1s,box-shadow .1s}
-.switch[aria-checked="true"]{box-shadow:var(--hw-press)}
-.switch[aria-checked="true"]::after{background:var(--green);box-shadow:0 0 8px 2px rgba(70,226,127,.55)}
+.slider-row{display:grid;grid-template-columns:64px 1fr 44px;align-items:center;gap:10px;font-size:var(--fs-sm);font-weight:700}
+.slider-row .v{text-align:right;color:var(--muted);font-family:var(--mono)}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 12px);z-index:60;
-  background:linear-gradient(180deg,#090c0a,#0d110e);border:1px solid #000;color:var(--led);text-shadow:0 0 6px var(--led-glow);
-  padding:11px 16px;border-radius:10px;font-size:13px;font-weight:800;display:flex;gap:14px;align-items:center;
-  box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,178,62,.12);width:max-content;max-width:calc(100% - 32px)}
+  background:var(--screen);border:1px solid #000;color:var(--led);min-height:var(--tap);
+  padding:0 16px;border-radius:var(--r-md);font-size:var(--fs-sm);font-weight:700;display:flex;gap:14px;align-items:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);width:max-content;max-width:calc(100% - 32px)}
 body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
-.toast button{color:var(--text);font-weight:900;flex-shrink:0;text-decoration:underline;text-shadow:none}
+.toast button{min-height:var(--tap);color:var(--text);font-weight:800;flex-shrink:0;text-decoration:underline}
 
 @keyframes up{from{transform:translateY(48px);opacity:0}to{transform:none;opacity:1}}
 @keyframes fade{from{opacity:0}}
 @media (prefers-reduced-motion:reduce){.sheet,.sheet-backdrop{animation:none}}
 @media (min-width:720px){
   .sheet-root{align-items:center}
-  .sheet{max-width:520px;border-radius:18px;border-bottom:1px solid #050607;padding-bottom:22px}
+  .sheet{max-width:520px;border-radius:var(--r-lg);border-bottom:1px solid var(--line);padding-bottom:22px}
   .sheet-grip{display:none}
   .sheet-head{margin-top:8px}
 }
@@ -327,8 +295,7 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
   <div class="top-inner">
     <span class="brand">
       <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 3h5.6l4.4 15.5H4.8z" fill="#ff6b3d"/><path d="M10.4 5.6h3.2l2 8H8.4z" fill="#0b0c10"/><path d="M12 16 16.4 4.6" stroke="#f3f4f6" stroke-width="1.8" stroke-linecap="round"/><rect x="3.8" y="18.5" width="16.4" height="2.4" rx="1" fill="#d64e26"/></svg>
-      <span><span class="brand-name">SetClick</span><span class="brand-sub">SETLIST METRONOME</span></span>
-      <span class="brand-led" aria-hidden="true"></span>
+      <span>SetClick</span>
     </span>
     <button id="editBtn" class="pill-btn" aria-pressed="false">編集</button>
     <button id="settingsBtn" class="icon-btn" aria-label="設定">
@@ -340,21 +307,22 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
 
 <main id="setlistView">
   <div class="sl-head">
-    <span class="engrave sl-over">Setlist</span>
     <div class="sl-title-row"><h1 id="slTitle" class="sl-title"></h1><span id="slMeta" class="sl-meta"></span></div>
     <div id="slTools" class="sl-tools" hidden>
       <button data-x="rename">名前変更</button><button data-x="dup">複製</button><button data-x="share">共有</button>
-      <button data-x="left" aria-label="セトリを左へ移動">◀ 左へ</button><button data-x="right" aria-label="セトリを右へ移動">右へ ▶</button><button data-x="del" class="del">セトリを削除</button>
+      <button data-x="left" aria-label="セトリを左へ移動">◀ 左へ</button><button data-x="right" aria-label="セトリを右へ移動">右へ ▶</button>
     </div>
   </div>
   <ol id="songList" class="songs"></ol>
   <div id="emptyState" class="empty" hidden>
     <p class="empty-title">まだ曲がありません</p>
-    <p class="hint">「＋ 曲を追加」で1曲ずつ、「まとめて追加」なら<br>「曲名 BPM」を1行ずつ書いて一気に登録できます</p>
   </div>
   <div class="add-row">
     <button id="addSongBtn" class="add-btn">＋ 曲を追加</button>
-    <button id="bulkBtn" class="add-btn sub">まとめて追加</button>
+    <button id="bulkBtn" class="add-btn">まとめて追加</button>
+  </div>
+  <div id="slDanger" class="sl-danger" hidden>
+    <button id="slDelBtn" class="danger-btn">このセトリを削除</button>
   </div>
 </main>
 
@@ -369,7 +337,9 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
 <section id="dock" class="dock" aria-label="プレイヤー">
   <div class="dock-inner">
     <div id="dockBeats" class="beats"></div>
+    <button id="saveBpm" class="save-bpm" hidden></button>
     <div class="dock-row">
+      <button id="bpmMinus" class="nudge" aria-label="テンポを1下げる">−</button>
       <div class="dock-lcd lcd">
         <div class="dock-info">
           <div id="dockTitle" class="dock-title"></div>
@@ -377,14 +347,10 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
         </div>
         <div class="bpm-box">
           <span id="dockBpm" class="val" role="img"></span>
-          <span id="bpmUnit" class="unit">BPM</span>
-          <button id="saveBpm" class="save-bpm" hidden>保存</button>
+          <span class="unit">BPM</span>
         </div>
       </div>
-      <div class="nudges">
-        <button id="bpmPlus" class="nudge" aria-label="テンポを1上げる">＋</button>
-        <button id="bpmMinus" class="nudge" aria-label="テンポを1下げる">−</button>
-      </div>
+      <button id="bpmPlus" class="nudge" aria-label="テンポを1上げる">＋</button>
     </div>
     <div id="dockMixer" class="mixer compact dock-mixer" role="group" aria-label="ミキサー"></div>
     <div class="dock-controls">
@@ -404,7 +370,7 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
 
 <script>
 'use strict';
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const KEY = 'setclick:v1';
 const BPM_MIN = 20, BPM_MAX = 300;
 const DEBUG = /[?&]debug\b/.test(location.search);
@@ -540,10 +506,10 @@ const defaultSettings = () => ({ sound: 'click', volume: 0.9, countBars: 0, flas
 function defaultState() {
   const song = (title, bpm, ts, mix, note) => ({ id: uid(), title, bpm, ts, mix: { ...defaultMix(ts), ...mix }, note });
   const sl = { id: uid(), name: 'サンプル', songs: [
-    song('アップテンポの曲', 180, '4/4', {}, 'タップで再生／もう一度タップで停止'),
-    song('ミドルテンポの曲', 120, '4/4', { e8: 0.6 }, '8分の裏を小さめに足した例'),
+    song('アップテンポの曲', 180, '4/4', {}, ''),
+    song('ミドルテンポの曲', 120, '4/4', { e8: 0.6 }, ''),
     song('ワルツ', 150, '3/4', {}, ''),
-    song('バラード', 58, '6/8', {}, '付点4分で数えて8分で刻む'),
+    song('バラード', 58, '6/8', {}, ''),
   ] };
   return { v: 1, setlists: [sl], currentId: sl.id, free: { bpm: 120, ts: '4/4', mix: defaultMix('4/4') }, settings: defaultSettings() };
 }
@@ -843,6 +809,7 @@ function render() {
   $('#slTitle').textContent = sl.name;
   $('#slMeta').textContent = `${sl.songs.length}曲`;
   $('#slTools').hidden = !ui.edit;
+  $('#slDanger').hidden = !ui.edit;
   $('#slTools [data-x="left"]').disabled = S.setlists.indexOf(sl) === 0;
   $('#slTools [data-x="right"]').disabled = S.setlists.indexOf(sl) === S.setlists.length - 1;
   renderChips();
@@ -879,7 +846,7 @@ function renderList() {
           <span class="song-meta">${meterChips(s)}${s.note ? `<span class="song-note">${esc(s.note)}</span>` : ''}</span>
         </span>
         ${ui.edit ? `<span class="edit-mark">${ICON.edit}</span>` : ''}
-        <span class="song-bpm lcd">${seg7(s.bpm, 3)}<small>BPM</small></span>
+        <span class="song-bpm">${s.bpm}<small>BPM</small></span>
       </button>
       ${ui.edit ? `<span class="song-tools">
         <button data-act="up" aria-label="上へ移動" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
@@ -919,11 +886,11 @@ function baseIndex() {
 function renderDock() {
   const sl = cur(), src = Engine.src;
   const live = Engine.active && src && src.kind !== 'preview';
-  let title, p, base = null, baseMix = null, kind = 'song';
+  let title, p, base = null, kind = 'song';
   if (live) {
     p = src; kind = src.kind;
     title = kind === 'free' ? 'フリー' : src.title;
-    if (kind === 'song') { base = src.baseBpm; baseMix = src.baseMix; }
+    if (kind === 'song') base = src.baseBpm;
   } else {
     const s = sl.songs.find(x => x.id === ui.cuedId);
     if (s) { title = s.title; p = toEngine(s); }
@@ -937,17 +904,18 @@ function renderDock() {
   else if (kind === 'song' && i >= 0 && i === sl.songs.length - 1) parts.push('最後の曲');
   $('#dockTitle').textContent = title;
   $('#dockSub').textContent = parts.join('　');
+  // ± で変えたテンポは一時的。曲と違うときだけ保存ボタンを出す（ミキサーは触った時点で曲に保存される）
   const bpmChanged = base != null && p.bpm !== base;
-  const changed = bpmChanged || (baseMix != null && !mixEq(p.mix, baseMix));
   const val = $('#dockBpm');
   const shown = p.bpm ?? '---';
   if (val.dataset.v !== String(shown)) { val.dataset.v = shown; val.innerHTML = seg7(shown, 3); }
   val.setAttribute('aria-label', p.bpm ? `${p.bpm} BPM` : 'BPM なし');
   val.classList.toggle('changed', bpmChanged);
-  $('#saveBpm').hidden = !changed;
-  $('#bpmUnit').hidden = changed;
-  // ミキサー（再生中だけ動かせる。拍子に応じてフェーダーの並びが変わる）
-  renderMixer($('#dockMixer'), p.ts, p.mix, !live);
+  const saveBtn = $('#saveBpm');
+  saveBtn.hidden = !bpmChanged;
+  if (bpmChanged) saveBtn.textContent = `${p.bpm} BPM を保存`;
+  // ミキサーは停止中も操作できる（曲がない時だけ無効）
+  renderMixer($('#dockMixer'), p.ts, p.mix, !live && !sl.songs.some(x => x.id === ui.cuedId));
   $('#bpmMinus').disabled = $('#bpmPlus').disabled = !live;
   const play = $('#playBtn');
   play.classList.toggle('stop', !!live);
@@ -983,12 +951,20 @@ function playSong(song, setlistId = cur().id) {
   ui.cuedId = song.id;
   Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, baseBpm: song.bpm, baseMix: { ...song.mix }, ...toEngine(song) });
 }
-// ドックのミキサー操作：再生中の音にその場で反映（曲への保存は「保存」ボタン）
+// ドックのミキサー操作：鳴っていれば即反映し、その曲（フリーならフリー設定）にそのまま保存する。停止中は選択中の曲を直接変更
 function setLiveMix(k, v) {
   const src = Engine.src;
-  if (!Engine.active || !src || src.kind === 'preview') return;
-  Engine.setMix({ ...src.mix, [k]: v });
-  if (src.kind === 'free') { S.free.mix = { ...Engine.src.mix }; save(); renderFree(); }
+  if (Engine.active && src && src.kind !== 'preview') {
+    Engine.setMix({ ...src.mix, [k]: v });
+    if (src.kind === 'free') { S.free.mix = { ...Engine.src.mix }; save(); renderFree(); return; }
+    const song = findSong(src.setlistId, src.songId);
+    if (song) { song.mix = { ...Engine.src.mix }; src.baseMix = { ...song.mix }; save(); renderList(); }
+    return;
+  }
+  const song = cur().songs.find(x => x.id === ui.cuedId);
+  if (!song) return;
+  song.mix = { ...song.mix, [k]: v };
+  save(); renderList(); renderDock();
 }
 function toggleSong(song) {
   if (playingSongId() === song.id) Engine.stop();
@@ -1024,10 +1000,10 @@ function saveNudge() {
   if (!src || src.kind !== 'song') return;
   const song = findSong(src.setlistId, src.songId);
   if (!song) return;
-  song.bpm = src.bpm; song.mix = { ...src.mix };
-  src.baseBpm = src.bpm; src.baseMix = { ...src.mix };
+  song.bpm = src.bpm;
+  src.baseBpm = src.bpm;
   save(); renderList(); renderDock();
-  toast(`「${song.title}」を ${song.bpm} BPM・今のミックスで保存しました`);
+  toast(`「${song.title}」を ${song.bpm} BPM で保存しました`);
 }
 function freeToggle() {
   freeTempo?.flush();
@@ -1061,7 +1037,6 @@ function onBeat(n) {
   }
 }
 Engine.on(() => {
-  document.body.classList.toggle('playing', Engine.active);
   renderDock(); updateMarks(); renderFree();
   if (Engine.active) ensureRaf();
 });
@@ -1101,18 +1076,18 @@ function tempoHTML() {
     </div>
     <div class="stepper-row">${[-5, -1, 1, 5].map(d => `<button type="button" class="step num" data-t="step" data-d="${d}">${d > 0 ? '+' : '−'}${Math.abs(d)}</button>`).join('')}</div>
     <input type="range" data-t="range" min="${BPM_MIN}" max="${BPM_MAX}" step="1" aria-label="BPM スライダー">
-    <button type="button" class="tap-pad" data-t="tap">TAP<span class="tap-hint">リズムに合わせて4回以上叩く</span></button>
+    <button type="button" class="tap-pad" data-t="tap">TAP</button>
     <div class="field"><div class="field-label">拍子</div>
       <div class="meters">${METERS.map(m => `<button type="button" data-t="ts" data-v="${m}">${m}</button>`).join('')}</div>
     </div>
-    <div class="field"><div class="field-label">ミキサー<span>名前タップでオン/オフ・上下ドラッグで音量</span></div>
+    <div class="field"><div class="field-label">ミキサー</div>
       <div class="mixer" data-t="mixer"></div>
     </div>
   </div>`;
 }
 
 /* ---------- ミキサー（ノブ） ---------- */
-// ノブを上下（右左）にドラッグ／ホイールで音量（5%刻み）、下の名前タップでオン/オフ（切る前の音量を覚えておく）
+// ノブを上下（右左）にドラッグ／ホイールで音量（5%刻み）、下の ON/OFF キーで鳴らす・止める（切る前の音量を覚えておく）
 // 0〜100% をノブの -135°〜+135° に割り当てる（アナログ機材と同じ 270° 可動）
 const lastLevel = {};
 const KNOB_SVG = `<svg viewBox="0 0 100 100" aria-hidden="true">
@@ -1133,7 +1108,7 @@ function renderMixer(el, ts, mix, disabled) {
     el.innerHTML = LAYERS[kind].map(([k, l]) => `
       <div class="knob-cell" data-k="${k}">
         <div class="knob" data-k="${k}" role="slider" aria-label="${l}の音量" aria-valuemin="0" aria-valuemax="100">${KNOB_SVG}</div>
-        <button type="button" class="knob-label" data-k="${k}">${l}</button>
+        <button type="button" class="mute" data-k="${k}" aria-label="${l}をオン/オフ">${l}</button>
         <span class="knob-val"></span>
       </div>`).join('');
   }
@@ -1150,7 +1125,7 @@ function renderMixer(el, ts, mix, disabled) {
     kn.setAttribute('aria-disabled', String(!!disabled));
     kn.tabIndex = disabled ? -1 : 0;
     c.querySelector('.knob-val').textContent = pct;
-    const lb = c.querySelector('.knob-label');
+    const lb = c.querySelector('.mute');
     lb.disabled = !!disabled;
     lb.setAttribute('aria-pressed', String(v > 0));
   }
@@ -1191,7 +1166,7 @@ function attachMixer(el, getMix, onSet) {
     onSet(kn.dataset.k, q5(n));
   });
   el.addEventListener('click', e => {
-    const b = e.target.closest('.knob-label');
+    const b = e.target.closest('.mute');
     if (!b || b.disabled) return;
     const k = b.dataset.k, v = getMix()?.[k] ?? 0;
     if (v > 0) { lastLevel[k] = v; onSet(k, 0); }
@@ -1615,13 +1590,14 @@ function openSettings() {
       <div class="field"><div class="field-label">音色</div><div class="seg" data-g="sound">${SOUNDS.map(o => `<button type="button" data-v="${o.v}">${o.label}</button>`).join('')}</div></div>
       <div class="field"><div class="field-label">音量</div>
         <div class="slider-row"><span>全体</span><input type="range" min="0" max="100" step="1" data-k="volume" aria-label="全体の音量"><span class="v num" data-v="volume"></span></div>
-        <p class="hint">1拍目・表・8分裏・3連・16分の音量は、再生中に下のプレイヤーのミキサーで曲ごとに調整できます（名前タップでオン/オフ、上下ドラッグで音量、「保存」で曲に記録）。</p>
       </div>
       <div class="field"><div class="field-label">セトリ再生のカウント</div>
         <div class="seg" data-g="count">${COUNT_MODES.map(o => `<button type="button" data-v="${o.v}">${o.label}</button>`).join('')}</div>
         <p class="hint">「1小節で停止」はテンポを耳に入れてからカウントを出すとき用。フリーでは常に鳴らし続けます。</p>
       </div>
-      <div class="toggle-row"><div><div class="t">画面フラッシュ</div><p class="hint">拍に合わせて画面が光る（音が聞き取りにくいステージ用）</p></div><button type="button" class="switch" role="switch" data-x="flash" aria-label="画面フラッシュ"></button></div>
+      <div class="field"><div class="field-label">画面フラッシュ<span>拍に合わせて画面が光る</span></div>
+        <div class="seg" data-g="flash"><button type="button" data-v="0">オフ</button><button type="button" data-v="1">オン</button></div>
+      </div>
       <div class="field"><div class="field-label">バックアップ</div>
         <div class="two"><button type="button" class="ghost-btn" data-x="export">書き出し</button><button type="button" class="ghost-btn" data-x="import">読み込み</button></div>
         <input type="file" accept="application/json,.json" data-x="file" hidden>
@@ -1637,7 +1613,7 @@ function openSettings() {
   const sync = () => {
     el.querySelectorAll('[data-g="sound"] button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.sound)));
     el.querySelectorAll('[data-g="count"] button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === st.countBars)));
-    el.querySelector('[data-x="flash"]').setAttribute('aria-checked', String(st.flash));
+    el.querySelectorAll('[data-g="flash"] button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.v === '1') === st.flash)));
     vol.value = Math.round(st.volume * 100);
     el.querySelector('[data-v="volume"]').textContent = `${vol.value}%`;
   };
@@ -1652,9 +1628,9 @@ function openSettings() {
     const g = b.closest('[data-g]')?.dataset.g;
     if (g === 'sound') { st.sound = b.dataset.v; changed(); if (!Engine.active) Engine.blip(); return; }
     if (g === 'count') { st.countBars = Number(b.dataset.v); changed(); return; }
+    if (g === 'flash') { st.flash = b.dataset.v === '1'; changed(); return; }
     const x = b.dataset.x;
-    if (x === 'flash') { st.flash = !st.flash; changed(); }
-    else if (x === 'export') exportBackup();
+    if (x === 'export') exportBackup();
     else if (x === 'shareall') shareLists(S.setlists);
     else if (x === 'import') el.querySelector('[data-x="file"]').click();
     else if (x === 'close') closeSheet();
@@ -1695,6 +1671,7 @@ $('#chips').addEventListener('click', e => {
   else if (b.dataset.sl) showSetlist(b.dataset.sl);
 });
 $('#slTools').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) setlistAction(b.dataset.x); });
+$('#slDelBtn').addEventListener('click', () => setlistAction('del'));
 $('#addSongBtn').addEventListener('click', () => openEditor(null));
 $('#bulkBtn').addEventListener('click', openBulk);
 $('#settingsBtn').addEventListener('click', openSettings);
