@@ -368,7 +368,7 @@ textarea.input{resize:vertical;line-height:1.6}
 
 <script>
 'use strict';
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.8.1';
 const KEY = 'setclick:v1';
 const BPM_MIN = 20, BPM_MAX = 300;
 const DEBUG = /[?&]debug\b/.test(location.search);
@@ -568,6 +568,8 @@ const Engine = (() => {
   const queue = [];        // 画面表示用（発音時刻つき）
   const log = [];          // ?debug のときだけ使う
   const LOOKAHEAD = 0.12;
+  // 再生開始の1拍目を何秒先に置くか。予約が処理される前に時刻が過ぎない最小限（音声処理の数ブロック分）
+  const START_LEAD = 0.02;
   const listeners = new Set();
   const emit = () => listeners.forEach(f => f());
 
@@ -705,7 +707,7 @@ const Engine = (() => {
     applyMixGains(false);
     active = true; scheduling = true;
     idx = 0; anchorIdx = 0;
-    anchorTime = ctx.currentTime + 0.06;
+    anchorTime = ctx.currentTime + START_LEAD;
     const bars = S.settings.countBars;
     stopIdx = bars && src.kind === 'song' ? bars * src.beats * src.grid : Infinity;
     timerStart(); tick();
@@ -764,6 +766,10 @@ const Engine = (() => {
     get src() { return src; },
     get active() { return active; },
     get state() { return ctx ? ctx.state : 'none'; },
+    // 音声がすでに動いていて、ユーザー操作なしでも即座に鳴らせるか。
+    // 古い iOS はマナーモード対策の無音 audio を操作の中で再生し直す必要があるので対象外
+    get ready() { return !!ctx && ctx.state === 'running' && !(isIOS && !('audioSession' in navigator)); },
+    get time() { return ctx ? ctx.currentTime : 0; },
     get log() { return log; },
     // ?debug 専用：出力のピーク値（音が実際に出ているかの検証用）
     peak() { if (!analyser) return null; const a = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(a); return a.reduce((m, v) => Math.max(m, Math.abs(v)), 0); },
@@ -1039,6 +1045,19 @@ function holdRepeat(btn, fn) {
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => btn.addEventListener(ev, stop));
   btn.addEventListener('click', e => { if (e.detail === 0) fn(); }); // キーボード操作
   btn.addEventListener('contextmenu', e => e.preventDefault());
+}
+// 再生系のボタン：指を離した時（click）ではなく押した瞬間（pointerdown）に動かす。
+// ただし音声がまだ起動していない時（アプリを開いて最初の1回など）は、ブラウザの自動再生制限で
+// タッチの押し下げからは音を出せないため、従来どおり離した時の click で動かす
+function pressAction(btn, fn) {
+  let handled = false;
+  btn.addEventListener('pointerdown', e => {
+    handled = false;
+    if (e.button !== 0 || btn.disabled || !Engine.ready) return;
+    handled = true; fn();
+  });
+  // detail 0 はキーボード操作。押し下げで処理済みなら、続く click は捨てる
+  btn.addEventListener('click', e => { if (e.detail === 0 || !handled) fn(); handled = false; });
 }
 function makeTapper(onBpm) {
   let taps = [];
@@ -1659,13 +1678,13 @@ $('#addSongBtn').addEventListener('click', () => openEditor(null));
 $('#bulkBtn').addEventListener('click', openBulk);
 $('#settingsBtn').addEventListener('click', openSettings);
 $('#editBtn').addEventListener('click', () => { ui.edit = !ui.edit; render(); });
-$('#playBtn').addEventListener('click', dockPlay);
-$('#prevBtn').addEventListener('click', () => step(-1));
-$('#nextBtn').addEventListener('click', () => step(1));
+pressAction($('#playBtn'), dockPlay);
+pressAction($('#prevBtn'), () => step(-1));
+pressAction($('#nextBtn'), () => step(1));
 holdRepeat($('#bpmMinus'), () => nudge(-1));
 holdRepeat($('#bpmPlus'), () => nudge(1));
 attachMixer($('#dockMixer'));
-$('#freePlay').addEventListener('click', freeToggle);
+pressAction($('#freePlay'), freeToggle);
 $('#freeAdd').addEventListener('click', () => { freeTempo.flush(); openEditor(null, { bpm: S.free.bpm, ts: S.free.ts }); });
 
 document.addEventListener('keydown', e => {
