@@ -124,7 +124,6 @@ main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 2
 .song.playing{background:var(--panel)}
 .song.playing::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--led)}
 .song.playing .song-bpm{color:var(--led)}
-.chip.draft{color:var(--led);border-color:rgba(255,178,62,.5);font-family:inherit}
 .edit-mark{color:var(--dim)}
 .song-tools{display:flex;align-items:center;gap:4px;padding-right:8px}
 .song-tools button{width:var(--tap);display:grid;place-items:center}
@@ -160,12 +159,6 @@ main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 2
 .bpm-box .val{display:block;height:44px}
 .bpm-box .val.changed{color:#ff7a45}
 .bpm-box .unit{font-size:var(--fs-xs);opacity:.6;line-height:1;margin-top:5px}
-/* 微調整したテンポの保存：ドックの上に浮かぶ大きめのボタン */
-.draft-bar{position:absolute;right:0;bottom:calc(100% + 20px);display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;border-radius:var(--r-md);
-  background:var(--screen);border:1px solid rgba(255,178,62,.45);box-shadow:0 6px 18px rgba(0,0,0,.55);font-size:var(--fs-sm)}
-.draft-msg{color:var(--led);font-weight:700;white-space:nowrap}
-.draft-btn{min-height:var(--tap);padding:0 14px;border-radius:var(--r-sm);font-weight:800;border:1px solid var(--line);color:var(--text)}
-.draft-btn.primary{background:var(--led);border-color:var(--led);color:#1b1204}
 .dock-mixer{margin-top:10px}
 .dock-controls{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;margin-top:10px}
 .ctl{min-height:52px;border-radius:var(--r-md);display:grid;place-items:center}
@@ -343,11 +336,6 @@ textarea.input{resize:vertical;line-height:1.6}
 <section id="dock" class="dock" aria-label="プレイヤー">
   <div class="dock-inner">
     <div id="dockBeats" class="beats"></div>
-    <div id="draftBar" class="draft-bar" role="status" hidden>
-      <span class="draft-msg">未保存の変更</span>
-      <button id="draftRevert" class="draft-btn">戻す</button>
-      <button id="draftSave" class="draft-btn primary">保存</button>
-    </div>
     <div class="dock-row">
       <button id="bpmMinus" class="nudge" aria-label="テンポを1下げる">−</button>
       <div class="dock-lcd lcd">
@@ -380,7 +368,7 @@ textarea.input{resize:vertical;line-height:1.6}
 
 <script>
 'use strict';
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
 const KEY = 'setclick:v1';
 const BPM_MIN = 20, BPM_MAX = 300;
 const DEBUG = /[?&]debug\b/.test(location.search);
@@ -438,8 +426,7 @@ const layersOf = ts => LAYERS[kindOf(ts)];
 const defaultMix = ts => ({ accent: 1, beat: 1, e8: kindOf(ts) === 'compound' ? 0.8 : 0, t3: 0, s16: 0 });
 const mixEq = (a, b) => MIX_KEYS.every(k => Math.round((a?.[k] ?? 0) * 100) === Math.round((b?.[k] ?? 0) * 100));
 // 「4/4・8分裏・3連」のような表示用（拍の間に鳴るレイヤーだけ列挙）
-const activeSubs = m => layersOf(m.ts).filter(([k]) => k !== 'accent' && k !== 'beat' && (m.mix?.[k] ?? 0) > 0).map(([, l]) => l);
-const meterText = m => [m.ts, ...activeSubs(m)].join('・');
+const meterText = m => m.ts;
 
 // 7セグ LED 表示（SVG）。消えているセグメントも薄く描いて実機っぽくする。オフラインでも使えるようフォントは使わない
 const SEG_ON = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg', '-': 'g', ' ': '' };
@@ -460,10 +447,10 @@ function seg7(value, width = 3) {
   });
   return out + '</g></svg>';
 }
-// 曲の設定 → 発音エンジン用のパラメータ（拍数・1拍のティック数・表示ドットの束ね方・ミックス）
+// 曲の設定 → 発音エンジン用のパラメータ（拍数・1拍のティック数・表示ドットの束ね方）。ミックスは全曲共通のミキサー
 function toEngine(m) {
   const mi = meterInfo(m.ts);
-  return { bpm: m.bpm, beats: mi.pulses, grid: GRID[mi.kind], dpb: mi.dpb, kindM: mi.kind, ts: m.ts, mix: { ...m.mix } };
+  return { bpm: m.bpm, beats: mi.pulses, grid: GRID[mi.kind], dpb: mi.dpb, kindM: mi.kind, ts: m.ts, mix: effMix() };
 }
 
 /* ================= データ ================= */
@@ -512,7 +499,8 @@ function sanitizeSetlist(o) {
     songs: o.songs.map(sanitizeSong).filter(Boolean).slice(0, 300),
   };
 }
-const defaultSettings = () => ({ sound: 'click', volume: 0.9, countBars: 0, flash: false });
+const defaultLevels = () => ({ accent: 1, beat: 1, e8: 0.7, t3: 0.7, s16: 0.7 });
+const defaultSettings = () => ({ sound: 'click', volume: 0.9, countBars: 0, flash: false, levels: defaultLevels() });
 function defaultState() {
   const song = (title, bpm, ts, mix, note) => ({ id: uid(), title, bpm, ts, mix: { ...defaultMix(ts), ...mix }, note });
   const sl = { id: uid(), name: 'サンプル', songs: [
@@ -547,6 +535,8 @@ function load() {
   s.volume = num01(old.volume, 0.9);
   s.flash = old.flash === true;
   if ([0, 1, 2].includes(old.countBars)) s.countBars = old.countBars;
+  const lv = old.levels && typeof old.levels === 'object' ? old.levels : {};
+  s.levels = Object.fromEntries(MIX_KEYS.map(k => [k, num01(lv[k], defaultLevels()[k])]));
   return st;
 }
 let S = load();
@@ -802,7 +792,7 @@ document.addEventListener('visibilitychange', () => {
 const ui = { view: 'setlist', edit: false, cuedId: null };
 let freeTempo = null;
 
-const meterChips = s => [s.ts, ...activeSubs(s)].map(t => `<span class="chip">${t}</span>`).join('');
+const meterChips = s => `<span class="chip">${s.ts}</span>`;
 const playingSongId = () => (Engine.active && Engine.src?.kind === 'song' ? Engine.src.songId : null);
 
 function render() {
@@ -853,7 +843,7 @@ function renderList() {
         <span class="song-no num">${i + 1}</span>
         <span class="song-body">
           <span class="song-title">${esc(s.title)}</span>
-          <span class="song-meta">${drafts.has(dkey(sl.id, s.id)) ? '<span class="chip draft">未保存</span>' : ''}${meterChips(s)}${s.note ? `<span class="song-note">${esc(s.note)}</span>` : ''}</span>
+          <span class="song-meta">${meterChips(s)}${s.note ? `<span class="song-note">${esc(s.note)}</span>` : ''}</span>
         </span>
         ${ui.edit ? `<span class="edit-mark">${ICON.edit}</span>` : ''}
         <span class="song-bpm">${s.bpm}<small>BPM</small></span>
@@ -893,22 +883,6 @@ function baseIndex() {
   return sl.songs.findIndex(s => s.id === id);
 }
 
-/* ---------- 下書き（未保存の変更） ----------
-   プレイヤーでの ± とミキサー操作は、曲ごとの「下書き」に入る。曲に書くのは「保存」を押したときだけ。
-   止めても曲を移っても下書きは消えない（黙って失われない）。保存・戻すはプレイヤー上のバーから。
-   ※ 下書きはメモリだけに持つ（再読み込みで消える）。曲の編集画面で保存した場合はそちらが優先 */
-const drafts = new Map(); // `${setlistId}:${songId}` → { bpm, mix }
-const dkey = (setlistId, songId) => `${setlistId}:${songId}`;
-const effOf = (setlistId, song) => ({ ...song, ...(drafts.get(dkey(setlistId, song.id)) || {}) });
-function setDraft(setlistId, song, patch) {
-  const k = dkey(setlistId, song.id);
-  const d = { bpm: song.bpm, mix: { ...song.mix }, ...(drafts.get(k) || {}), ...patch };
-  if (d.bpm === song.bpm && mixEq(d.mix, song.mix)) drafts.delete(k); else drafts.set(k, d);
-}
-function dropDrafts(setlistId, songId) {
-  if (songId) { drafts.delete(dkey(setlistId, songId)); return; }
-  for (const k of [...drafts.keys()]) if (k.startsWith(`${setlistId}:`)) drafts.delete(k);
-}
 // プレイヤーが対象にしている曲：再生中の曲（別のセトリでも）か、選択中の曲
 function dockTarget() {
   const src = Engine.src;
@@ -920,22 +894,14 @@ function dockTarget() {
   return s ? { setlistId: cur().id, song: s } : null;
 }
 const liveSrc = () => (Engine.active && Engine.src && Engine.src.kind !== 'preview' ? Engine.src : null);
-// プレイヤーのミキサーが今表示している値（停止中は選択中の曲の下書き込みの値）
-function dockMix() {
-  const src = liveSrc();
-  if (src) return src.mix;
-  const t = dockTarget();
-  return t ? effOf(t.setlistId, t.song).mix : null;
-}
 
 function renderDock() {
   const sl = cur(), src = liveSrc(), t = dockTarget();
   let title, p, kind = 'song';
   if (src && src.kind === 'free') { p = src; kind = 'free'; title = 'フリー'; }
   else if (src) { p = src; title = src.title; }
-  else if (t) { p = toEngine(effOf(t.setlistId, t.song)); title = t.song.title; }
-  else { title = '曲を追加してください'; p = toEngine({ bpm: null, ts: '4/4', mix: defaultMix('4/4') }); }
-  const draft = kind === 'song' && t ? drafts.get(dkey(t.setlistId, t.song.id)) : null;
+  else if (t) { p = toEngine(t.song); title = t.song.title; }
+  else { title = '曲を追加してください'; p = toEngine({ bpm: null, ts: '4/4' }); }
   const i = baseIndex();
   const next = i >= 0 ? sl.songs[i + 1] : null;
   // 置いて見る距離で読むもの：曲名・BPM・次の曲・拍ランプ
@@ -951,11 +917,11 @@ function renderDock() {
   const shown = p.bpm ?? '---';
   if (val.dataset.v !== String(shown)) { val.dataset.v = shown; val.innerHTML = seg7(shown, 3); }
   val.setAttribute('aria-label', p.bpm ? `${p.bpm} BPM` : 'BPM なし');
-  val.classList.toggle('changed', !!draft && draft.bpm !== t.song.bpm);
+  // ± は再生中だけ・その場限り（保存しない）。曲の BPM を変えるのは編集画面だけ
+  val.classList.toggle('changed', !!(src && src.kind === 'song' && t && p.bpm !== t.song.bpm));
   $('#dockUnit').textContent = `BPM・${p.ts}`;
-  $('#draftBar').hidden = !draft;
-  renderMixer($('#dockMixer'), p.ts, p.mix, !src && !t);
-  $('#bpmMinus').disabled = $('#bpmPlus').disabled = !src && !t;
+  renderMixer($('#dockMixer'), p.ts);
+  $('#bpmMinus').disabled = $('#bpmPlus').disabled = !src;
   const play = $('#playBtn');
   play.classList.toggle('stop', !!src);
   play.innerHTML = src ? `${ICON.stop}<span>停止</span>` : `${ICON.play}<span>再生</span>`;
@@ -989,18 +955,7 @@ function measureDock() {
 /* ================= 再生操作 ================= */
 function playSong(song, setlistId = cur().id) {
   ui.cuedId = song.id;
-  Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, ...toEngine(effOf(setlistId, song)) });
-}
-// プレイヤーのミキサー：下書きに入れ、鳴っていれば即反映（フリー再生中はフリー設定をそのまま更新）
-function setLiveMix(k, v) {
-  const src = liveSrc();
-  if (src && src.kind === 'free') { Engine.setMix({ ...src.mix, [k]: v }); S.free.mix = { ...Engine.src.mix }; save(); renderFree(); return; }
-  const t = dockTarget();
-  if (!t) return;
-  const mix = { ...effOf(t.setlistId, t.song).mix, [k]: v };
-  setDraft(t.setlistId, t.song, { mix });
-  if (src) Engine.setMix(mix);
-  renderList(); renderDock();
+  Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, ...toEngine(song) });
 }
 function toggleSong(song) {
   if (playingSongId() === song.id) Engine.stop();
@@ -1027,33 +982,13 @@ function scrollToSong(id) {
   const li = $(`#songList li[data-id="${id}"]`);
   if (li) li.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
-// ± ：停止中も使える。下書きに入れ、鳴っていれば即反映
+// ± ：再生中だけ。曲には保存しない（止めて再生し直すと曲の BPM に戻る）。フリーは設定として覚える
 function nudge(d) {
   if (ui.view === 'free') { freeTempo?.setBpm(S.free.bpm + d); return; }
   const src = liveSrc();
-  if (src && src.kind === 'free') { Engine.setBpm(src.bpm + d); S.free.bpm = Engine.src.bpm; save(); renderFree(); return; }
-  const t = dockTarget();
-  if (!t) return;
-  const bpm = clampBpm(effOf(t.setlistId, t.song).bpm + d);
-  setDraft(t.setlistId, t.song, { bpm });
-  if (src) Engine.setBpm(bpm);
-  renderList(); renderDock();
-}
-function saveDraft() {
-  const t = dockTarget();
-  const d = t && drafts.get(dkey(t.setlistId, t.song.id));
-  if (!d) return;
-  t.song.bpm = d.bpm; t.song.mix = { ...d.mix };
-  drafts.delete(dkey(t.setlistId, t.song.id));
-  save(); renderList(); renderDock();
-  toast(`「${t.song.title}」に保存しました`);
-}
-function revertDraft() {
-  const t = dockTarget();
-  if (!t) return;
-  drafts.delete(dkey(t.setlistId, t.song.id));
-  if (Engine.active && Engine.src?.kind === 'song' && Engine.src.songId === t.song.id) { Engine.setBpm(t.song.bpm); Engine.setMix(t.song.mix); }
-  renderList(); renderDock();
+  if (!src) return;
+  Engine.setBpm(src.bpm + d);
+  if (src.kind === 'free') { S.free.bpm = Engine.src.bpm; save(); renderFree(); }
 }
 function freeToggle() {
   freeTempo?.flush();
@@ -1116,7 +1051,7 @@ function makeTapper(onBpm) {
   };
 }
 
-function tempoHTML() {
+function tempoHTML({ mixer = false } = {}) {
   return `
   <div class="tempo">
     <div class="lcd big-lcd">
@@ -1130,16 +1065,33 @@ function tempoHTML() {
     <div class="field"><div class="field-label">拍子</div>
       <div class="meters">${METERS.map(m => `<button type="button" data-t="ts" data-v="${m}">${m}</button>`).join('')}</div>
     </div>
-    <div class="field"><div class="field-label">ミキサー</div>
-      <div class="mixer" data-t="mixer"></div>
-    </div>
+    ${mixer ? `<div class="field"><div class="field-label">ミキサー</div><div class="mixer" data-t="mixer"></div></div>` : ''}
   </div>`;
 }
 
-/* ---------- ミキサー（ノブ） ---------- */
-// ノブを上下（右左）にドラッグ／ホイールで音量（5%刻み）、下の ON/OFF キーで鳴らす・止める（切る前の音量を覚えておく）
+/* ---------- ミキサー（全曲共通・1つだけ） ----------
+   音量（つまみの量）は触ると自動保存（S.settings.levels）。
+   ON/OFF は保存しない：起動時はいつも 1拍目と表だけ ON。つまみを回すか ON/OFF キーを押したレイヤーだけ ON になる。
+   ドックとフリーのミキサーは同じ状態を表示・操作する。曲ごとの設定は持たない（2026-09-20 Koki 決定） */
+const layerOn = { accent: true, beat: true, e8: false, t3: false, s16: false };
+const effMix = () => Object.fromEntries(MIX_KEYS.map(k => [k, layerOn[k] ? S.settings.levels[k] : 0]));
+function mixChanged() {
+  if (Engine.active && Engine.src) Engine.setMix(effMix()); // 鳴っていれば即反映（emit で再描画される）
+  else { renderDock(); renderFree(); }
+}
+function setLevel(k, v) {
+  S.settings.levels[k] = v;
+  layerOn[k] = v > 0; // 回したら ON、0 まで絞ったら OFF
+  save(); mixChanged();
+}
+function toggleLayer(k) {
+  layerOn[k] = !layerOn[k];
+  if (layerOn[k] && S.settings.levels[k] <= 0) { S.settings.levels[k] = 0.7; save(); }
+  mixChanged();
+}
+
+// ノブを上下（右左）にドラッグ／ホイールで音量（5%刻み）、下の ON/OFF キーで鳴らす・止める
 // 0〜100% をノブの -135°〜+135° に割り当てる（アナログ機材と同じ 270° 可動）
-const lastLevel = {};
 const KNOB_SVG = `<svg viewBox="0 0 100 100" aria-hidden="true">
   <circle class="k-arc-bg" cx="50" cy="50" r="45" pathLength="100" stroke-dasharray="75 100" transform="rotate(135 50 50)"/>
   <circle class="k-arc" cx="50" cy="50" r="45" pathLength="100" transform="rotate(135 50 50)" filter="url(#kGlow)"/>
@@ -1150,81 +1102,73 @@ const KNOB_SVG = `<svg viewBox="0 0 100 100" aria-hidden="true">
   <circle cx="50" cy="50" r="24" fill="url(#kShine)"/>
   <line class="k-rot k-ptr" x1="50" y1="29" x2="50" y2="40"/>
 </svg>`;
-function renderMixer(el, ts, mix, disabled) {
+// ノブは保存済みの音量を常に指し、OFF のレイヤーはリングを暗くする
+function renderMixer(el, ts) {
   const kind = kindOf(ts);
   if (el.dataset.kind !== kind) {
     el.dataset.kind = kind;
     el.style.gridTemplateColumns = `repeat(${LAYERS[kind].length}, minmax(0, 1fr))`;
     el.innerHTML = LAYERS[kind].map(([k, l]) => `
       <div class="knob-cell" data-k="${k}">
-        <div class="knob" data-k="${k}" role="slider" aria-label="${l}の音量" aria-valuemin="0" aria-valuemax="100">${KNOB_SVG}</div>
+        <div class="knob" data-k="${k}" role="slider" tabindex="0" aria-label="${l}の音量" aria-valuemin="0" aria-valuemax="100">${KNOB_SVG}</div>
         <button type="button" class="mute" data-k="${k}" aria-label="${l}をオン/オフ">${l}</button>
         <span class="knob-val"></span>
       </div>`).join('');
   }
-  el.classList.toggle('disabled', !!disabled);
   for (const c of el.querySelectorAll('.knob-cell')) {
-    const k = c.dataset.k, v = mix?.[k] ?? 0, pct = Math.round(v * 100);
+    const k = c.dataset.k, v = S.settings.levels[k] ?? 0, on = layerOn[k], pct = Math.round(v * 100);
     const kn = c.querySelector('.knob');
     const rot = `rotate(${(-135 + 270 * v).toFixed(1)} 50 50)`;
     kn.querySelectorAll('.k-rot').forEach(g => g.setAttribute('transform', rot));
     const arc = kn.querySelector('.k-arc');
     arc.setAttribute('stroke-dasharray', `${(75 * v).toFixed(2)} 100`);
-    arc.style.opacity = v > 0 ? 1 : 0;
+    arc.style.opacity = v <= 0 ? 0 : on ? 1 : 0.25;
     kn.setAttribute('aria-valuenow', pct);
-    kn.setAttribute('aria-disabled', String(!!disabled));
-    kn.tabIndex = disabled ? -1 : 0;
     c.querySelector('.knob-val').textContent = pct;
-    const lb = c.querySelector('.mute');
-    lb.disabled = !!disabled;
-    lb.setAttribute('aria-pressed', String(v > 0));
+    c.querySelector('.mute').setAttribute('aria-pressed', String(on));
   }
 }
-// el ごとに1回だけ呼ぶ。getMix() で現在値、onSet(k, v) で変更を通知
-function attachMixer(el, getMix, onSet) {
+// el ごとに1回だけ呼ぶ
+function attachMixer(el) {
   let drag = null;
   const q5 = v => clamp(Math.round(v * 20) / 20, 0, 1);
-  const locked = () => el.classList.contains('disabled');
-  const level = k => getMix()?.[k] ?? 0;
+  const level = k => S.settings.levels[k] ?? 0;
   el.addEventListener('pointerdown', e => {
     const kn = e.target.closest('.knob');
-    if (!kn || locked() || e.button !== 0) return;
+    if (!kn || e.button !== 0) return;
     e.preventDefault();
-    drag = { kn, k: kn.dataset.k, x: e.clientX, y: e.clientY, v: level(kn.dataset.k) };
+    drag = { k: kn.dataset.k, x: e.clientX, y: e.clientY, v: level(kn.dataset.k) };
     try { kn.setPointerCapture(e.pointerId); } catch {}
   });
   // DAW と同じく「上へドラッグで右回り」。140px で 0→100%。右方向も少し効かせる
   el.addEventListener('pointermove', e => {
     if (!drag) return;
     const v = q5(drag.v + ((drag.y - e.clientY) + (e.clientX - drag.x) * 0.5) / 140);
-    if (v !== level(drag.k)) onSet(drag.k, v);
+    if (v !== level(drag.k) || !layerOn[drag.k]) setLevel(drag.k, v);
   });
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => el.addEventListener(ev, () => { drag = null; }));
   el.addEventListener('wheel', e => {
     const kn = e.target.closest('.knob');
-    if (!kn || locked()) return;
+    if (!kn) return;
     e.preventDefault();
-    onSet(kn.dataset.k, q5(level(kn.dataset.k) + (e.deltaY < 0 ? 0.05 : -0.05)));
+    setLevel(kn.dataset.k, q5(level(kn.dataset.k) + (e.deltaY < 0 ? 0.05 : -0.05)));
   }, { passive: false });
   el.addEventListener('keydown', e => {
     const kn = e.target.closest('.knob');
-    if (!kn || locked()) return;
+    if (!kn) return;
     const v = level(kn.dataset.k);
     const n = { ArrowUp: v + 0.05, ArrowRight: v + 0.05, ArrowDown: v - 0.05, ArrowLeft: v - 0.05, Home: 0, End: 1 }[e.key];
     if (n === undefined) return;
     e.preventDefault(); e.stopPropagation();
-    onSet(kn.dataset.k, q5(n));
+    setLevel(kn.dataset.k, q5(n));
   });
   el.addEventListener('click', e => {
     const b = e.target.closest('.mute');
-    if (!b || b.disabled) return;
-    const k = b.dataset.k, v = getMix()?.[k] ?? 0;
-    if (v > 0) { lastLevel[k] = v; onSet(k, 0); }
-    else onSet(k, lastLevel[k] || (k === 'accent' || k === 'beat' ? 1 : 0.7));
+    if (b) toggleLayer(b.dataset.k);
   });
 }
 
-// model = { bpm, ts, mix } を画面の操作と結びつける。onChange(field) で呼び出し側に通知。
+// model = { bpm, ts } を画面の操作と結びつける。onChange(field) で呼び出し側に通知。ミキサーがあれば共通ミキサーを表示
 function bindTempo(root, model, onChange) {
   const q = s => root.querySelector(s);
   const bpmIn = q('[data-t="bpm"]'), range = q('[data-t="range"]'), tapBtn = q('[data-t="tap"]'), mixerEl = q('[data-t="mixer"]');
@@ -1235,12 +1179,9 @@ function bindTempo(root, model, onChange) {
     if (digits.dataset.v !== String(model.bpm)) { digits.dataset.v = model.bpm; digits.innerHTML = seg7(model.bpm, 3); }
     q('[data-t="unit"]').textContent = UNIT_LABEL[kindOf(model.ts)];
     root.querySelectorAll('[data-t="ts"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === model.ts)));
-    renderMixer(mixerEl, model.ts, model.mix, false);
+    if (mixerEl) renderMixer(mixerEl, model.ts);
   };
-  attachMixer(mixerEl, () => model.mix, (k, v) => {
-    if ((model.mix[k] ?? 0) === v) return;
-    model.mix = { ...model.mix, [k]: v }; sync(); onChange('mix');
-  });
+  if (mixerEl) attachMixer(mixerEl);
   const setBpm = v => {
     const b = clampBpm(v);
     if (b === model.bpm) { sync(); return; }
@@ -1259,13 +1200,7 @@ function bindTempo(root, model, onChange) {
   root.querySelectorAll('[data-t="step"]').forEach(b => holdRepeat(b, () => setBpm(model.bpm + Number(b.dataset.d))));
   root.querySelectorAll('[data-t="ts"]').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.v === model.ts) return;
-    const prevKind = kindOf(model.ts);
     model.ts = b.dataset.v;
-    // 4/4 ⇔ 6/8 のように数え方が変わるときは、拍の間のレイヤーをその拍子の定番に戻す（1拍目・表はそのまま）
-    if (kindOf(model.ts) !== prevKind) {
-      const d = defaultMix(model.ts);
-      model.mix = { ...model.mix, e8: d.e8, t3: d.t3, s16: d.s16 };
-    }
     sync(); onChange('ts');
   }));
   const tapper = makeTapper(v => setBpm(v));
@@ -1339,9 +1274,7 @@ function dialog({ title, message = '', input = null, ok = 'OK', danger = false }
 function openEditor(songId, preset = null) {
   const sl = cur();
   const orig = songId ? sl.songs.find(s => s.id === songId) : null;
-  // プレイヤーでの未保存の変更があれば、それを含めた値から編集を始める（保存すると下書きは曲に取り込まれる）
-  const base = orig ? effOf(sl.id, orig) : null;
-  const draft = orig ? { ...base, mix: { ...base.mix } } : { id: uid(), title: '', bpm: 120, ts: '4/4', mix: defaultMix('4/4'), note: '', ...(preset || {}) };
+  const draft = orig ? { ...orig } : { id: uid(), title: '', bpm: 120, ts: '4/4', note: '', ...(preset || {}) };
   const el = openSheet(`
     <div class="sheet-head"><button class="text-btn" data-x="cancel">キャンセル</button><h2>${orig ? '曲を編集' : `「${esc(sl.name)}」に追加`}</h2><button class="text-btn primary" data-x="save">保存</button></div>
     <div class="stack">
@@ -1365,7 +1298,6 @@ function openEditor(songId, preset = null) {
   const tempo = bindTempo(el, draft, field => {
     if (!previewing()) return;
     if (field === 'bpm') Engine.setBpm(draft.bpm);
-    else if (field === 'mix') Engine.setMix(draft.mix);
     else startPreview();
   });
   previewBtn.addEventListener('click', () => {
@@ -1381,7 +1313,7 @@ function openEditor(songId, preset = null) {
     draft.title = titleIn.value.trim().slice(0, 80) || '無題';
     draft.note = noteIn.value.trim().slice(0, 140);
     let target = orig;
-    if (orig) { Object.assign(orig, draft); dropDrafts(sl.id, orig.id); }
+    if (orig) Object.assign(orig, draft);
     else { target = { ...draft }; sl.songs.push(target); ui.cuedId = target.id; }
     save();
     const src = Engine.src;
@@ -1392,7 +1324,6 @@ function openEditor(songId, preset = null) {
       else {
         src.title = target.title;
         Engine.setBpm(target.bpm);
-        Engine.setMix(target.mix);
       }
     }
     if (preset) ui.view = 'setlist';
@@ -1403,7 +1334,6 @@ function openEditor(songId, preset = null) {
     const i = sl.songs.indexOf(orig);
     if (i < 0) return;
     sl.songs.splice(i, 1);
-    dropDrafts(sl.id, orig.id);
     if (playingSongId() === orig.id) Engine.stop();
     save(); closeSheet(); render();
     toast(`「${orig.title}」を削除しました`, { action: '元に戻す', onAction: () => {
@@ -1441,7 +1371,7 @@ function parseBulk(text) {
     const mix = subs.length
       ? subs.map(x => mixFromSub(ts, x)).reduce((a, b) => ({ ...a, e8: Math.max(a.e8, b.e8), t3: Math.max(a.t3, b.t3), s16: Math.max(a.s16, b.s16) }))
       : defaultMix(ts);
-    out.push({ title, bpm: bpm ?? 120, noBpm: bpm === null, ts, mix });
+    out.push({ title, bpm: bpm ?? 120, noBpm: bpm === null, ts });
   }
   return out;
 }
@@ -1450,7 +1380,7 @@ function openBulk() {
   const el = openSheet(`
     <div class="sheet-head"><button class="text-btn" data-x="cancel">キャンセル</button><h2>まとめて追加</h2><button class="text-btn primary" data-x="add">追加</button></div>
     <div class="stack">
-      <p class="hint" style="margin:0">「${esc(sl.name)}」の最後に追加します。1行に1曲、<b>曲名 BPM</b> の順で書いてください。拍子（3/4・6/8 など）や裏（8分・16分・3連）も書けます。</p>
+      <p class="hint" style="margin:0">「${esc(sl.name)}」の最後に追加します。1行に1曲、<b>曲名 BPM</b> の順で書いてください。拍子（3/4・6/8 など）も書けます。</p>
       <textarea class="input" data-x="text" rows="7" placeholder="1曲目 168&#10;2曲目 185 8分&#10;3曲目 92 3/4&#10;バラード 58 6/8"></textarea>
       <ul class="parse-list" data-x="list"></ul>
     </div>`);
@@ -1470,7 +1400,7 @@ function openBulk() {
     const rows = update();
     if (!rows.length) return;
     const first = rows[0];
-    for (const r of rows) sl.songs.push({ id: uid(), title: r.title, bpm: r.bpm, ts: r.ts, mix: r.mix, note: '' });
+    for (const r of rows) sl.songs.push({ id: uid(), title: r.title, bpm: r.bpm, ts: r.ts, note: '' });
     save(); closeSheet(); render();
     toast(`${rows.length}曲を追加しました`);
     const firstNew = sl.songs[sl.songs.length - rows.length];
@@ -1530,7 +1460,6 @@ async function setlistAction(x) {
     if (!ok) return;
     if (Engine.active && Engine.src?.setlistId === sl.id) Engine.stop();
     S.setlists.splice(i, 1);
-    dropDrafts(sl.id);
     if (!S.setlists.length) S.setlists.push({ id: uid(), name: 'セトリ1', songs: [] });
     S.currentId = S.setlists[Math.max(0, i - 1)].id;
     ui.cuedId = null; ui.edit = false;
@@ -1566,7 +1495,7 @@ function decodeShared(text) {
   } catch { return null; }
 }
 function shareUrl(lists) {
-  const pack = l => ({ n: l.name, s: l.songs.map(s => [s.title, s.bpm, s.ts, MIX_KEYS.map(k => Math.round((s.mix?.[k] ?? 0) * 100)), s.note]) });
+  const pack = l => ({ n: l.name, s: l.songs.map(s => [s.title, s.bpm, s.ts, 'none', s.note]) });
   const multi = lists.length > 1;
   const payload = multi ? { v: 3, L: lists.map(pack) } : { v: 2, ...pack(lists[0]) };
   return `${location.origin}${location.pathname}#${multi ? 'importAll' : 'import'}=${b64uEncode(JSON.stringify(payload))}`;
@@ -1735,11 +1664,9 @@ $('#prevBtn').addEventListener('click', () => step(-1));
 $('#nextBtn').addEventListener('click', () => step(1));
 holdRepeat($('#bpmMinus'), () => nudge(-1));
 holdRepeat($('#bpmPlus'), () => nudge(1));
-$('#draftSave').addEventListener('click', saveDraft);
-$('#draftRevert').addEventListener('click', revertDraft);
-attachMixer($('#dockMixer'), dockMix, setLiveMix);
+attachMixer($('#dockMixer'));
 $('#freePlay').addEventListener('click', freeToggle);
-$('#freeAdd').addEventListener('click', () => { freeTempo.flush(); openEditor(null, { bpm: S.free.bpm, ts: S.free.ts, mix: { ...S.free.mix } }); });
+$('#freeAdd').addEventListener('click', () => { freeTempo.flush(); openEditor(null, { bpm: S.free.bpm, ts: S.free.ts }); });
 
 document.addEventListener('keydown', e => {
   if (sheet) { if (e.key === 'Escape') closeSheet(); return; }
@@ -1760,12 +1687,11 @@ barObserver.observe($('#freeBar'));
 window.addEventListener('hashchange', handleImportHash);
 
 /* ================= 起動 ================= */
-$('#freeTempo').innerHTML = tempoHTML();
+$('#freeTempo').innerHTML = tempoHTML({ mixer: true });
 freeTempo = bindTempo($('#freeTempo'), S.free, field => {
   save();
   if (Engine.active && Engine.src?.kind === 'free') {
     if (field === 'bpm') Engine.setBpm(S.free.bpm);
-    else if (field === 'mix') Engine.setMix(S.free.mix);
     else Engine.start({ kind: 'free', title: 'フリー', ...toEngine(S.free) });
   }
   renderFree();
