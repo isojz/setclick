@@ -15,10 +15,11 @@
 <link rel="icon" type="image/png" href="./icon-192.png">
 <title>SetClick</title>
 <style>
-/* SetClick スタジオ機材テーマ v1.6
+/* SetClick スタジオ機材テーマ v1.6（v1.9 でアクセシビリティ基準に合わせて調整）
    階層は3つだけ：パネル＝平ら／触る部品（再生系・ノブ・±・TAP・ON/OFF）＝浮く／表示窓（液晶・入力）＝沈む
-   文字 11/13/16/18/24px の5段階、角丸 6/10/16px の3種、タップ領域は最小 44px
-   戻し先：git tag v1.5.0（レビュー前の機材風）、v1.4.0（平らなデザイン） */
+   文字 13/16/18/24px の4段階（13px 未満は使わない）、角丸 6/10/16px の3種、タップ領域は最小 44px
+   コントラスト：文字は背景に対して 4.5:1 以上、浮く部品の縁は下地に対して 3:1 以上（暗い画面では影が見えないため縁で示す）
+   戻し先：git tag v1.8.1（この調整の前）、v1.5.0（レビュー前の機材風）、v1.4.0（平らなデザイン） */
 :root{
   --bg:#0f1013;
   --panel:#191b1f;
@@ -27,7 +28,7 @@
   --edge:#08090b;
   --text:#e9ebef;
   --muted:#a0a7b3;
-  --dim:#6f7682;
+  --dim:#858c98;
   --accent:#ff6b3d;
   --accent-ink:#1a0b05;
   --led:#ffb23e;
@@ -35,10 +36,11 @@
   --green:#46e27f;
   --red:#ff4f3c;
   --danger:#ff5a5f;
-  --fs-xs:11px;--fs-sm:13px;--fs-md:16px;--fs-lg:18px;--fs-xl:24px;
+  --fs-sm:13px;--fs-md:16px;--fs-lg:18px;--fs-xl:24px;
   --r-sm:6px;--r-md:10px;--r-lg:16px;
   --tap:44px;
   --raised:linear-gradient(180deg,#353940,#272a30);
+  --raised-edge:#666c77;
   --raised-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 2px 0 #07080a,0 3px 6px rgba(0,0,0,.35);
   --pressed-shadow:inset 0 2px 5px rgba(0,0,0,.6);
   --sunken:inset 0 2px 8px rgba(0,0,0,.8);
@@ -65,7 +67,7 @@ svg{display:block;flex-shrink:0}
 
 /* ---------- 3階層 ---------- */
 /* 浮く：実際に演奏中に触る部品だけ */
-.ctl,.nudge,.step,.tap-pad,.mute{background:var(--raised);border:1px solid var(--edge);box-shadow:var(--raised-shadow);color:var(--text);transition:transform .05s,box-shadow .05s}
+.ctl,.nudge,.step,.tap-pad,.mute{background:var(--raised);border:1px solid var(--raised-edge);box-shadow:var(--raised-shadow);color:var(--text);transition:transform .05s,box-shadow .05s}
 .ctl:active:not(:disabled),.nudge:active:not(:disabled),.step:active,.tap-pad:active,.mute:active:not(:disabled),.big-play:active,.fill-btn:active{transform:translateY(2px);box-shadow:var(--pressed-shadow)}
 /* 平ら：それ以外のボタン・選択肢は細い罫線だけ */
 .pill-btn,.icon-btn,.chip-tab,.sl-tools button,.meters button,.ghost-btn,.add-btn,.seg button,.song-tools button{
@@ -92,7 +94,7 @@ svg{display:block;flex-shrink:0}
 .chips::-webkit-scrollbar{display:none}
 .chip-tab{flex-shrink:0;padding:0 14px;font-size:var(--fs-sm);border-radius:var(--r-sm);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;
   display:flex;align-items:center;gap:7px}
-.chip-tab .n{font-size:var(--fs-xs);opacity:.6;font-family:var(--mono)}
+.chip-tab .n{font-size:var(--fs-sm);color:var(--dim);font-family:var(--mono)}
 .chip-tab.add{border-style:dashed;color:var(--dim)}
 .chip-sep{flex-shrink:0;width:1px;background:var(--line);margin:8px 2px}
 
@@ -114,11 +116,11 @@ main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 2
 .song-body{flex:1;min-width:0}
 .song-title{display:block;font-weight:700;font-size:var(--fs-lg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .song-meta{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:var(--fs-sm);color:var(--muted);min-width:0}
-.chip{flex-shrink:0;padding:0 6px;border-radius:var(--r-sm);border:1px solid var(--line);color:var(--muted);font-size:var(--fs-xs);line-height:18px;font-family:var(--mono)}
+.chip{flex-shrink:0;padding:0 6px;border-radius:var(--r-sm);border:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm);line-height:18px;font-family:var(--mono)}
 .song-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .song-bpm{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;font-family:var(--mono);font-variant-numeric:tabular-nums;
   font-size:var(--fs-xl);font-weight:700;line-height:1}
-.song-bpm small{font-size:var(--fs-xs);color:var(--dim);margin-top:4px;font-weight:600;font-family:inherit}
+.song-bpm small{font-size:var(--fs-sm);color:var(--dim);margin-top:4px;font-weight:600;font-family:inherit}
 .song.cued{background:var(--panel)}
 /* 再生中の強調は「左のバー＋BPM の色」の2つだけ */
 .song.playing{background:var(--panel)}
@@ -158,13 +160,13 @@ main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 2
 .bpm-box{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
 .bpm-box .val{display:block;height:44px}
 .bpm-box .val.changed{color:#ff7a45}
-.bpm-box .unit{font-size:var(--fs-xs);opacity:.6;line-height:1;margin-top:5px}
+.bpm-box .unit{font-size:var(--fs-sm);opacity:.75;line-height:1;margin-top:5px}
 .dock-mixer{margin-top:10px}
 .dock-controls{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;margin-top:10px}
 .ctl{min-height:52px;border-radius:var(--r-md);display:grid;place-items:center}
 .ctl.play,.big-play{background:var(--accent);border:1px solid #6b240d;color:var(--accent-ink);font-weight:800;font-size:var(--fs-md);
   display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 2px 0 #3d1407}
-.ctl.play.stop,.big-play.stop{background:var(--raised);border-color:var(--edge);color:var(--red);box-shadow:var(--pressed-shadow)}
+.ctl.play.stop,.big-play.stop{background:var(--raised);border-color:var(--raised-edge);color:#ff7d6c;box-shadow:var(--pressed-shadow)}
 
 #flash{position:fixed;inset:0;pointer-events:none;z-index:25;background:var(--accent);opacity:0}
 
@@ -179,7 +181,7 @@ main{max-width:var(--col);margin:0 auto;padding:16px 16px calc(var(--dock-h) + 2
   font:700 56px/1 var(--mono);color:var(--led);padding:0;margin:0;-moz-appearance:textfield;appearance:textfield}
 .big-num::-webkit-outer-spin-button,.big-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .big-num:focus{opacity:1;outline:none}
-.bpm-label{font-size:var(--fs-xs);opacity:.6;margin-top:6px;text-align:center}
+.bpm-label{font-size:var(--fs-sm);opacity:.75;margin-top:6px;text-align:center}
 .stepper-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .step{min-height:var(--tap);border-radius:var(--r-md);font-size:var(--fs-md);font-weight:700;font-family:var(--mono)}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:var(--tap);background:transparent;margin:0}
@@ -208,14 +210,14 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;border-radius:var(--r
 .k-arc{fill:none;stroke:var(--kc);stroke-width:6;stroke-linecap:round}
 .k-ptr{stroke:#1d2025;stroke-width:3.6;stroke-linecap:round}
 .mute{width:100%;min-height:var(--tap);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;gap:6px;
-  font-size:var(--fs-sm);font-weight:700;color:var(--dim);white-space:nowrap;padding:0 4px}
+  font-size:var(--fs-sm);font-weight:700;color:var(--muted);white-space:nowrap;padding:0 4px}
 .mute::before{content:"";width:7px;height:7px;border-radius:50%;background:#2a2d33;box-shadow:inset 0 1px 1px rgba(0,0,0,.6);flex-shrink:0}
 .mute[aria-pressed="true"]{color:var(--text)}
 .mute[aria-pressed="true"]::before{background:var(--kc);box-shadow:0 0 6px var(--kc)}
-.knob-val{font-size:var(--fs-xs);color:var(--dim);font-family:var(--mono);margin-top:-2px}
+.knob-val{font-size:var(--fs-sm);color:var(--dim);font-family:var(--mono);margin-top:-2px}
 .mixer.compact .knob{width:44px;height:44px}
 .mixer.compact .knob-val{display:none}
-.mixer.compact .mute{font-size:var(--fs-xs);gap:5px}
+.mixer.compact .mute{gap:5px}
 .mixer.disabled{opacity:.45}
 .mixer.disabled .knob{cursor:default}
 .field{display:block;width:100%;min-width:0}
@@ -368,7 +370,7 @@ textarea.input{resize:vertical;line-height:1.6}
 
 <script>
 'use strict';
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.9.0';
 const KEY = 'setclick:v1';
 const BPM_MIN = 20, BPM_MAX = 300;
 const DEBUG = /[?&]debug\b/.test(location.search);
