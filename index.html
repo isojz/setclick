@@ -132,11 +132,7 @@ body.no-dock main{padding-bottom:calc(var(--safe-b) + 32px)}
 .bpm-box .unit{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.1em;margin-top:3px;height:18px;line-height:18px}
 .save-bpm{font-size:11px;font-weight:800;color:var(--warn);padding:0 9px;height:20px;border:1px solid var(--warn);border-radius:99px;margin-top:2px}
 .nudge{width:38px;height:38px;border-radius:11px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;font-weight:700;color:var(--muted)}
-.dock-sub-row{display:flex;align-items:center;gap:10px;margin-top:10px}
-.dock-sub-row .lbl{font-size:11px;font-weight:800;color:var(--dim);letter-spacing:.08em;flex-shrink:0;width:22px;text-align:center}
-.seg.mini{padding:2px;border-radius:10px}
-.seg.mini button{padding:6px 2px;font-size:12px;border-radius:8px}
-.seg.mini button.hot[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.dock-mixer{margin-top:10px}
 .dock-controls{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;margin-top:10px}
 .ctl{height:56px;border-radius:15px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--text)}
 .ctl:active{background:var(--surface-3)}
@@ -168,6 +164,23 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
 .seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px;width:100%}
 .seg button{flex:1;min-width:0;padding:10px 2px;border-radius:9px;font-size:13px;font-weight:700;color:var(--dim);white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--surface-3);color:var(--text)}
+/* ミキサー（縦フェーダー） */
+.mixer{display:grid;gap:8px}
+.fader{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fader-label{font-size:12px;font-weight:800;padding:6px 0;border-radius:9px;background:var(--surface-3);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fader-label.off{background:transparent;color:var(--dim);box-shadow:inset 0 0 0 1px var(--line)}
+.fader-track{position:relative;height:120px;border-radius:12px;background:var(--surface);border:1px solid var(--line);overflow:hidden;touch-action:none;cursor:ns-resize}
+.fader-fill{position:absolute;left:0;right:0;bottom:0;background:var(--warn)}
+.fader[data-k="accent"] .fader-fill{background:var(--accent)}
+.fader[data-k="beat"] .fader-fill{background:#dfe3ea}
+.fader-val{text-align:center;font-size:11px;font-weight:800;color:var(--muted);margin-top:-2px}
+.mixer.compact{gap:6px}
+.mixer.compact .fader{gap:4px}
+.mixer.compact .fader-label{font-size:11px;padding:4px 0}
+.mixer.compact .fader-track{height:40px;border-radius:9px}
+.mixer.compact .fader-val{display:none}
+.mixer.disabled{opacity:.5}
+.mixer.disabled .fader-track{cursor:default}
 .field{display:block;width:100%;min-width:0}
 .field-label{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
 .field-label span{color:var(--dim);font-weight:600}
@@ -294,10 +307,7 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
         <button id="bpmPlus" class="nudge" aria-label="テンポを1上げる">＋</button>
       </div>
     </div>
-    <div class="dock-sub-row">
-      <span class="lbl">裏</span>
-      <div id="dockSubs" class="seg mini" role="group" aria-label="裏（拍の間の音）"></div>
-    </div>
+    <div id="dockMixer" class="mixer compact dock-mixer" role="group" aria-label="ミキサー"></div>
     <div class="dock-controls">
       <button id="prevBtn" class="ctl" aria-label="前の曲">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M5 5h2.2v14H5zM19.5 6.1v11.8a1 1 0 0 1-1.55.83L9.6 12.83a1 1 0 0 1 0-1.66l8.35-5.9a1 1 0 0 1 1.55.83z"/></svg>
@@ -315,24 +325,33 @@ body.no-dock .toast{bottom:calc(var(--safe-b) + 16px)}
 
 <script>
 'use strict';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const KEY = 'setclick:v1';
 const BPM_MIN = 20, BPM_MAX = 300;
 const DEBUG = /[?&]debug\b/.test(location.search);
 
 // 拍子。x/8 のうち 3 の倍数（6/8・9/8・12/8）は付点4分を1拍として数える
 const METERS = ['2/4', '3/4', '4/4', '5/4', '6/4', '7/4', '5/8', '6/8', '7/8', '9/8', '12/8'];
-// 裏（1拍の分割）。[キー, 表示名, 1拍あたりの発音数]
-const SUB_OPTIONS = {
-  simple: [['none', 'なし', 1], ['8th', '8分裏', 2], ['triplet', '3連', 3], ['16th', '16分', 4]],
-  compound: [['none', 'なし', 1], ['8th', '8分', 3], ['16th', '16分', 6]],
-  odd8: [['none', 'なし', 1], ['16th', '16分', 2]],
-};
 const UNIT_LABEL = { simple: '4分音符 = BPM', compound: '付点4分 = BPM', odd8: '8分音符 = BPM' };
-const SUB_KEYS = ['none', '8th', 'triplet', '16th'];
 const SOUNDS = [{ v: 'click', label: 'クリック' }, { v: 'wood', label: 'ウッド' }, { v: 'hat', label: 'ハイハット' }];
 const COUNT_MODES = [{ v: 0, label: '鳴らし続ける' }, { v: 1, label: '1小節で停止' }, { v: 2, label: '2小節で停止' }];
-const MIX = [{ k: 'accent', label: '1拍目' }, { k: 'beat', label: '表拍' }, { k: 'sub', label: '裏拍' }];
+
+// ミキサー（Dr.Beat 式）。各レイヤーの音量 0〜1 を曲ごとに持ち、0 なら鳴らない。複数同時に鳴らせる
+const MIX_KEYS = ['accent', 'beat', 'e8', 't3', 's16'];
+const LAYERS = {
+  simple: [['accent', '1拍目'], ['beat', '表'], ['e8', '8分裏'], ['t3', '3連'], ['s16', '16分']],
+  compound: [['accent', '1拍目'], ['beat', '表'], ['e8', '8分'], ['s16', '16分']],
+  odd8: [['accent', '1拍目'], ['beat', '表'], ['s16', '16分']],
+};
+// 1拍を何ティックに刻むか（8分・3連・16分がすべて乗る最小公倍数）と、各レイヤーが鳴るティック位置
+const GRID = { simple: 12, compound: 6, odd8: 2 };
+const TICKS = {
+  simple: { e8: [6], t3: [4, 8], s16: [3, 6, 9] },
+  compound: { e8: [2, 4], s16: [1, 2, 3, 4, 5] },
+  odd8: { s16: [1] },
+};
+// 旧形式（裏を1つ選ぶ方式 sub）からの移行用
+const SUB_KEYS = ['none', '8th', 'triplet', '16th'];
 
 const ICON = {
   play: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.6v14.8a1 1 0 0 0 1.53.85l11.8-7.4a1 1 0 0 0 0-1.7L8.53 3.75A1 1 0 0 0 7 4.6z"/></svg>',
@@ -358,26 +377,45 @@ function meterInfo(ts) {
   if (d === 8) return { n, d, kind: 'odd8', pulses: n, dpb: 1 };
   return { n, d, kind: 'simple', pulses: n, dpb: 1 };
 }
-const subOpt = (ts, sub) => SUB_OPTIONS[meterInfo(ts).kind].find(o => o[0] === sub);
-function normalizeSub(ts, sub) {
-  if (subOpt(ts, sub)) return sub;
-  return meterInfo(ts).kind === 'compound' && sub === 'triplet' ? '8th' : 'none';
-}
-const defaultSub = ts => (meterInfo(ts).kind === 'compound' ? '8th' : 'none');
-const subLabel = (ts, sub) => (sub === 'none' ? '' : subOpt(ts, sub)?.[1] || '');
-const meterText = m => m.ts + (m.sub !== 'none' ? '・' + subLabel(m.ts, m.sub) : '');
-// 曲の設定 → 発音エンジン用のパラメータ（拍数・1拍の発音数・表示ドットの束ね方）
+const kindOf = ts => meterInfo(ts).kind;
+const layersOf = ts => LAYERS[kindOf(ts)];
+// 拍子の定番ミックス（6/8 系は8分を刻むのが基本）
+const defaultMix = ts => ({ accent: 1, beat: 1, e8: kindOf(ts) === 'compound' ? 0.8 : 0, t3: 0, s16: 0 });
+const mixEq = (a, b) => MIX_KEYS.every(k => Math.round((a?.[k] ?? 0) * 100) === Math.round((b?.[k] ?? 0) * 100));
+// 「4/4・8分裏・3連」のような表示用（拍の間に鳴るレイヤーだけ列挙）
+const activeSubs = m => layersOf(m.ts).filter(([k]) => k !== 'accent' && k !== 'beat' && (m.mix?.[k] ?? 0) > 0).map(([, l]) => l);
+const meterText = m => [m.ts, ...activeSubs(m)].join('・');
+// 曲の設定 → 発音エンジン用のパラメータ（拍数・1拍のティック数・表示ドットの束ね方・ミックス）
 function toEngine(m) {
   const mi = meterInfo(m.ts);
-  return { bpm: m.bpm, beats: mi.pulses, sub: subOpt(m.ts, m.sub)?.[2] || 1, dpb: mi.dpb, ts: m.ts, subKey: m.sub };
+  return { bpm: m.bpm, beats: mi.pulses, grid: GRID[mi.kind], dpb: mi.dpb, kindM: mi.kind, ts: m.ts, mix: { ...m.mix } };
 }
 
 /* ================= データ ================= */
+let MIG = { accent: 1, beat: 1, sub: 0.8 }; // 旧データの音量バランス（load 中だけ旧設定値を入れる）
+function mixFromSub(ts, sub) {
+  const kind = kindOf(ts);
+  const m = { accent: MIG.accent, beat: MIG.beat, e8: 0, t3: 0, s16: 0 };
+  const k = { '8th': 'e8', triplet: kind === 'compound' ? 'e8' : 't3', '16th': 's16' }[sub];
+  if (k && (kind !== 'odd8' || k === 's16')) m[k] = MIG.sub;
+  return m;
+}
+function sanitizeMix(m) {
+  if (Array.isArray(m)) m = Object.fromEntries(MIX_KEYS.map((k, i) => [k, Number(m[i]) / 100])); // 共有リンクは 0〜100 の配列
+  if (!m || typeof m !== 'object') return null;
+  const o = {};
+  for (const k of MIX_KEYS) { const v = Number(m[k]); o[k] = Number.isFinite(v) ? clamp(Math.round(v * 100) / 100, 0, 1) : 0; }
+  return o;
+}
 function fixMeter(o) {
   let ts = typeof o.ts === 'string' && METERS.includes(o.ts) ? o.ts : null;
   if (!ts) { const b = Math.round(Number(o.beats)); ts = METERS.includes(`${b}/4`) ? `${b}/4` : '4/4'; }
-  let sub = SUB_KEYS.includes(o.sub) ? o.sub : ({ 1: 'none', 2: '8th', 3: 'triplet', 4: '16th' }[Number(o.sub)] || 'none');
-  return { ts, sub: normalizeSub(ts, sub) };
+  let mix = sanitizeMix(o.mix);
+  if (!mix) {
+    const sub = SUB_KEYS.includes(o.sub) ? o.sub : ({ 1: 'none', 2: '8th', 3: 'triplet', 4: '16th' }[Number(o.sub)] || 'none');
+    mix = mixFromSub(ts, sub);
+  }
+  return { ts, mix };
 }
 function sanitizeSong(o) {
   if (!o || typeof o !== 'object') return null;
@@ -399,38 +437,41 @@ function sanitizeSetlist(o) {
     songs: o.songs.map(sanitizeSong).filter(Boolean).slice(0, 300),
   };
 }
-const defaultSettings = () => ({ sound: 'click', volume: 0.9, mix: { accent: 1, beat: 1, sub: 0.8 }, accent: true, countBars: 0, flash: false });
+const defaultSettings = () => ({ sound: 'click', volume: 0.9, countBars: 0, flash: false });
 function defaultState() {
+  const song = (title, bpm, ts, mix, note) => ({ id: uid(), title, bpm, ts, mix: { ...defaultMix(ts), ...mix }, note });
   const sl = { id: uid(), name: 'サンプル', songs: [
-    { id: uid(), title: 'アップテンポの曲', bpm: 180, ts: '4/4', sub: 'none', note: 'タップで再生／もう一度タップで停止' },
-    { id: uid(), title: 'ミドルテンポの曲', bpm: 120, ts: '4/4', sub: '8th', note: '8分の裏も鳴らす設定' },
-    { id: uid(), title: 'ワルツ', bpm: 150, ts: '3/4', sub: 'none', note: '' },
-    { id: uid(), title: 'バラード', bpm: 58, ts: '6/8', sub: '8th', note: '付点4分で数えて8分で刻む' },
+    song('アップテンポの曲', 180, '4/4', {}, 'タップで再生／もう一度タップで停止'),
+    song('ミドルテンポの曲', 120, '4/4', { e8: 0.6 }, '8分の裏を小さめに足した例'),
+    song('ワルツ', 150, '3/4', {}, ''),
+    song('バラード', 58, '6/8', {}, '付点4分で数えて8分で刻む'),
   ] };
-  return { v: 1, setlists: [sl], currentId: sl.id, free: { bpm: 120, ts: '4/4', sub: 'none' }, settings: defaultSettings() };
+  return { v: 1, setlists: [sl], currentId: sl.id, free: { bpm: 120, ts: '4/4', mix: defaultMix('4/4') }, settings: defaultSettings() };
 }
 function load() {
   let d = null;
   try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch {}
   if (!d || !Array.isArray(d.setlists)) return defaultState();
+  const num01 = (v, dflt) => clamp(Number.isFinite(Number(v)) ? Number(v) : dflt, 0, 1);
+  // v1.3 以前は「裏を1つ選ぶ＋設定の全体バランス」だった → 各曲のミックスに焼き込む
+  const old = d.settings && typeof d.settings === 'object' ? d.settings : {};
+  MIG = { accent: old.accent === false ? 0 : num01(old.mix?.accent, 1), beat: num01(old.mix?.beat, 1), sub: num01(old.mix?.sub, 0.8) };
   const setlists = d.setlists.map(sanitizeSetlist).filter(Boolean);
+  const free = { bpm: clampBpm(d.free?.bpm ?? 120), ...fixMeter(d.free || {}) };
+  MIG = { accent: 1, beat: 1, sub: 0.8 };
   const st = {
     v: 1,
     setlists: setlists.length ? setlists : [{ id: uid(), name: 'セトリ1', songs: [] }],
     currentId: d.currentId,
-    free: { bpm: clampBpm(d.free?.bpm ?? 120), ...fixMeter(d.free || {}) },
-    settings: { ...defaultSettings(), ...(d.settings && typeof d.settings === 'object' ? d.settings : {}) },
+    free,
+    settings: defaultSettings(),
   };
   if (!st.setlists.some(s => s.id === st.currentId)) st.currentId = st.setlists[0].id;
   const s = st.settings;
-  const num01 = (v, dflt) => clamp(Number.isFinite(Number(v)) ? Number(v) : dflt, 0, 1);
-  if (!SOUNDS.some(x => x.v === s.sound)) s.sound = 'click';
-  s.volume = num01(s.volume, 0.9);
-  const m = s.mix && typeof s.mix === 'object' ? s.mix : {};
-  s.mix = { accent: num01(m.accent, 1), beat: num01(m.beat, 1), sub: num01(m.sub, 0.8) };
-  s.accent = s.accent !== false;
-  s.flash = s.flash === true;
-  if (![0, 1, 2].includes(s.countBars)) s.countBars = 0;
+  if (SOUNDS.some(x => x.v === old.sound)) s.sound = old.sound;
+  s.volume = num01(old.volume, 0.9);
+  s.flash = old.flash === true;
+  if ([0, 1, 2].includes(old.countBars)) s.countBars = old.countBars;
   return st;
 }
 let S = load();
@@ -454,7 +495,7 @@ function nextSetlistName() {
 // setTimeout で直接鳴らすとメインスレッドの負荷でテンポが揺れるため、この方式にしている。
 const Engine = (() => {
   let ctx = null, master = null, gains = null, worker = null, bufs = null, keepAlive = null, fallbackTimer = 0, analyser = null;
-  let src = null;          // { kind: 'song'|'free'|'preview', setlistId, songId, title, baseBpm, bpm, beats, sub, dpb, ts, subKey }
+  let src = null;          // { kind: 'song'|'free'|'preview', setlistId, songId, title, baseBpm, baseMix, bpm, beats, grid, dpb, kindM, ts, mix }
   let active = false;      // 再生中（UI 上）
   let scheduling = false;  // まだ先のノートを予約するか
   let anchorTime = 0, anchorIdx = 0, idx = 0, stopIdx = Infinity, endTimer = 0;
@@ -491,9 +532,9 @@ const Engine = (() => {
     master.gain.value = volGain();
     master.connect(ctx.destination);
     if (DEBUG) { analyser = ctx.createAnalyser(); analyser.fftSize = 2048; master.connect(analyser); }
-    // 1拍目・表拍・裏拍を別々のつまみで調整できるよう、系統ごとにゲインを分ける
+    // ミキサーの各レイヤー（1拍目・表・8分裏・3連・16分）ごとにゲインを分ける。再生中のフェーダー操作が即座に効く
     gains = {};
-    for (const { k } of MIX) { gains[k] = ctx.createGain(); gains[k].gain.value = S.settings.mix[k]; gains[k].connect(master); }
+    for (const k of MIX_KEYS) { gains[k] = ctx.createGain(); gains[k].gain.value = 0; gains[k].connect(master); }
     bufs = makeBuffers();
     // タイマーは Worker に置く（メインスレッドが重くても tick が遅れにくい）
     try {
@@ -527,7 +568,7 @@ const Engine = (() => {
       keepAlive.play().catch(() => {});
     }
   }
-  const interval = () => 60 / src.bpm / src.sub;
+  const interval = () => 60 / src.bpm / src.grid; // 1ティックの長さ（1拍 = grid ティック）
   function tick() {
     if (!scheduling || !ctx) return;
     const horizon = ctx.currentTime + LOOKAHEAD;
@@ -545,22 +586,38 @@ const Engine = (() => {
     }
     if (scheduled.length > 48) { const now = ctx.currentTime; scheduled = scheduled.filter(s => s.time > now - 0.2); }
   }
+  // ティック i を鳴らすか決める。拍頭は 1拍目（アクセント）か表、それ以外はそのティックに乗るレイヤーのうち一番大きいもの
   function scheduleNote(i, t) {
-    const perBar = src.beats * src.sub;
-    const inBar = i % perBar;
-    const beat = Math.floor(inBar / src.sub);
-    const subPos = inBar % src.sub;
-    const dpb = src.dpb || 1;
-    const kind = subPos ? 'sub' : (beat === 0 && S.settings.accent && src.beats > 1 ? 'accent' : 'beat');
+    const G = src.grid, perBar = src.beats * G;
+    const inBar = i % perBar, beat = Math.floor(inBar / G), tk = inBar % G;
+    let layer = null, vol = 0;
+    if (tk === 0) {
+      if (beat === 0 && src.mix.accent > 0) { layer = 'accent'; vol = src.mix.accent; }
+      else { layer = 'beat'; vol = src.mix.beat; }
+    } else {
+      const tt = TICKS[src.kindM];
+      for (const k in tt) if (tt[k].includes(tk) && src.mix[k] > vol) { vol = src.mix[k]; layer = k; }
+    }
+    const kind = layer === 'accent' ? 'accent' : tk === 0 ? 'beat' : 'sub';
+    // 表示用：拍（6/8 などは8分）ごとにドットを進める。音が 0 でも表示は進める
+    const tpd = G / src.dpb;
+    if (tk % tpd === 0) {
+      queue.push({ time: t, kind, dot: beat * src.dpb + tk / tpd });
+      if (queue.length > 128) queue.splice(0, queue.length - 128);
+    }
+    if (!layer || vol <= 0) return;
     const n = ctx.createBufferSource();
     n.buffer = bufs[S.settings.sound][kind];
-    n.connect(gains[kind]);
+    n.connect(gains[layer]);
     n.start(t);
     scheduled.push({ n, time: t });
-    // 表示用：6/8 などは8分ごとにドットを進める
-    queue.push({ time: t, kind, onDot: (subPos * dpb) % src.sub === 0, dot: beat * dpb + Math.floor(subPos * dpb / src.sub) });
-    if (queue.length > 128) queue.splice(0, queue.length - 128);
-    if (DEBUG) { log.push({ t, kind, bpm: src.bpm }); if (log.length > 500) log.shift(); }
+    if (DEBUG) { log.push({ t, kind, layer, bpm: src.bpm }); if (log.length > 500) log.shift(); }
+  }
+  function applyMixGains(smooth) {
+    for (const k of MIX_KEYS) {
+      const v = src?.mix?.[k] ?? 0;
+      if (smooth) gains[k].gain.setTargetAtTime(v, ctx.currentTime, 0.015); else gains[k].gain.setValueAtTime(v, ctx.currentTime);
+    }
   }
   function cancelScheduled() {
     const now = ctx ? ctx.currentTime : 0;
@@ -579,12 +636,13 @@ const Engine = (() => {
     unlock();
     cancelScheduled();
     clearTimeout(endTimer); endTimer = 0;
-    src = { ...next };
+    src = { ...next, mix: { ...next.mix } };
+    applyMixGains(false);
     active = true; scheduling = true;
     idx = 0; anchorIdx = 0;
     anchorTime = ctx.currentTime + 0.06;
     const bars = S.settings.countBars;
-    stopIdx = bars && src.kind === 'song' ? bars * src.beats * src.sub : Infinity;
+    stopIdx = bars && src.kind === 'song' ? bars * src.beats * src.grid : Infinity;
     timerStart(); tick();
     wake(true);
     emit();
@@ -609,43 +667,34 @@ const Engine = (() => {
     } else src.bpm = b;
     emit();
   }
-  // 再生中に裏（1拍の分割数）を切り替える：次の拍頭から新しい分割で刻み直す（小節内の位置は保つ）
-  function setSub(sub, subKey) {
+  // ミキサー操作：再生中でも即反映（すでに予約済みの音にもゲイン経由で効く。0 から上げたレイヤーは次のティックから鳴る）
+  function setMix(mix) {
     if (!src) return;
-    if (sub === src.sub) { src.subKey = subKey; emit(); return; }
-    if (active && scheduling && ctx) {
-      const old = src.sub;
-      const beatIdx = Math.ceil(idx / old) * old;       // まだ予約していない次の拍頭
-      const tBeat = anchorTime + (beatIdx - anchorIdx) * interval();
-      const beatNo = beatIdx / old;
-      src.sub = sub; src.subKey = subKey;
-      idx = beatNo * sub; anchorIdx = idx; anchorTime = tBeat;
-      if (stopIdx !== Infinity) stopIdx = (stopIdx / old) * sub;
-    } else { src.sub = sub; src.subKey = subKey; }
+    src.mix = { ...mix };
+    if (ctx) applyMixGains(true);
     emit();
   }
   function setVolume() {
     if (!ctx) return;
     master.gain.setTargetAtTime(volGain(), ctx.currentTime, 0.01);
-    for (const { k } of MIX) gains[k].gain.setTargetAtTime(S.settings.mix[k], ctx.currentTime, 0.01);
   }
   function blip(kind = 'accent') {
     unlock();
     const n = ctx.createBufferSource();
     n.buffer = bufs[S.settings.sound][kind];
-    n.connect(gains[kind]); n.start(ctx.currentTime + 0.02);
+    n.connect(master); n.start(ctx.currentTime + 0.02);
   }
   // 画面表示用：出力遅延ぶん遅らせて、実際に音が出た拍を取り出す
   function pull() {
     if (!ctx || !queue.length) return null;
     const now = ctx.currentTime - (ctx.outputLatency || 0) - (ctx.baseLatency || 0);
     let hit = null;
-    while (queue.length && queue[0].time <= now) { const q = queue.shift(); if (q.onDot) hit = q; }
+    while (queue.length && queue[0].time <= now) hit = queue.shift();
     return hit;
   }
   function resumeIfNeeded() { if (ctx && active && ctx.state !== 'running') ctx.resume().catch(() => {}); }
   return {
-    start, stop, setBpm, setSub, setVolume, blip, pull, resumeIfNeeded,
+    start, stop, setBpm, setMix, setVolume, blip, pull, resumeIfNeeded,
     on: f => { listeners.add(f); return () => listeners.delete(f); },
     get src() { return src; },
     get active() { return active; },
@@ -678,7 +727,7 @@ document.addEventListener('visibilitychange', () => {
 const ui = { view: 'setlist', edit: false, cuedId: null };
 let freeTempo = null;
 
-const meterChips = s => `<span class="chip">${s.ts}</span>${s.sub !== 'none' ? `<span class="chip">${subLabel(s.ts, s.sub)}</span>` : ''}`;
+const meterChips = s => [s.ts, ...activeSubs(s)].map(t => `<span class="chip">${t}</span>`).join('');
 const playingSongId = () => (Engine.active && Engine.src?.kind === 'song' ? Engine.src.songId : null);
 
 function render() {
@@ -752,7 +801,7 @@ function updateMarks() {
 // p = toEngine() の戻り値。拍（6/8 なら8分）ごとのドットを並べる
 function ensureDots(el, p) {
   const count = p.beats * p.dpb;
-  const accent = S.settings.accent && p.beats > 1;
+  const accent = (p.mix?.accent ?? 0) > 0 && p.beats > 1;
   const key = `${p.beats}:${p.dpb}:${accent}`;
   if (el.dataset.key === key) return;
   el.dataset.key = key;
@@ -771,41 +820,33 @@ function baseIndex() {
 function renderDock() {
   const sl = cur(), src = Engine.src;
   const live = Engine.active && src && src.kind !== 'preview';
-  let title, p, base = null, baseSub = null, kind = 'song';
+  let title, p, base = null, baseMix = null, kind = 'song';
   if (live) {
     p = src; kind = src.kind;
     title = kind === 'free' ? 'フリー' : src.title;
-    if (kind === 'song') { base = src.baseBpm; baseSub = src.baseSub; }
+    if (kind === 'song') { base = src.baseBpm; baseMix = src.baseMix; }
   } else {
     const s = sl.songs.find(x => x.id === ui.cuedId);
     if (s) { title = s.title; p = toEngine(s); }
-    else { title = '曲を追加してください'; p = toEngine({ bpm: null, ts: '4/4', sub: 'none' }); }
+    else { title = '曲を追加してください'; p = toEngine({ bpm: null, ts: '4/4', mix: defaultMix('4/4') }); }
   }
   const i = baseIndex();
   const next = i >= 0 ? sl.songs[i + 1] : null;
-  const parts = [meterText({ ts: p.ts, sub: p.subKey })];
+  const parts = [meterText(p)];
   if (S.settings.countBars && kind === 'song') parts.push(COUNT_MODES[S.settings.countBars].label);
   if (kind === 'song' && next) parts.push(`次: ${next.title}`);
   else if (kind === 'song' && i >= 0 && i === sl.songs.length - 1) parts.push('最後の曲');
   $('#dockTitle').textContent = title;
   $('#dockSub').textContent = parts.join('　');
   const bpmChanged = base != null && p.bpm !== base;
-  const changed = bpmChanged || (baseSub != null && p.subKey !== baseSub);
+  const changed = bpmChanged || (baseMix != null && !mixEq(p.mix, baseMix));
   const val = $('#dockBpm');
   val.textContent = p.bpm ?? '—';
   val.classList.toggle('changed', bpmChanged);
   $('#saveBpm').hidden = !changed;
   $('#bpmUnit').hidden = changed;
-  // 裏の切替（再生中だけ押せる。拍子に応じて選択肢が変わる）
-  const subsEl = $('#dockSubs'), kindM = meterInfo(p.ts).kind;
-  if (subsEl.dataset.kind !== kindM) {
-    subsEl.dataset.kind = kindM;
-    subsEl.innerHTML = SUB_OPTIONS[kindM].map(o => `<button type="button" data-v="${o[0]}" class="${o[0] === 'none' ? '' : 'hot'}">${o[1]}</button>`).join('');
-  }
-  subsEl.querySelectorAll('button').forEach(b => {
-    b.setAttribute('aria-pressed', String(b.dataset.v === p.subKey));
-    b.disabled = !live;
-  });
+  // ミキサー（再生中だけ動かせる。拍子に応じてフェーダーの並びが変わる）
+  renderMixer($('#dockMixer'), p.ts, p.mix, !live);
   $('#bpmMinus').disabled = $('#bpmPlus').disabled = !live;
   const play = $('#playBtn');
   play.classList.toggle('stop', !!live);
@@ -839,16 +880,14 @@ function measureDock() {
 /* ================= 再生操作 ================= */
 function playSong(song, setlistId = cur().id) {
   ui.cuedId = song.id;
-  Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, baseBpm: song.bpm, baseSub: song.sub, ...toEngine(song) });
+  Engine.start({ kind: 'song', setlistId, songId: song.id, title: song.title, baseBpm: song.bpm, baseMix: { ...song.mix }, ...toEngine(song) });
 }
-// 再生中の曲の裏をその場で切り替える（保存はしない。「保存」で曲に反映）
-function setLiveSub(key) {
+// ドックのミキサー操作：再生中の音にその場で反映（曲への保存は「保存」ボタン）
+function setLiveMix(k, v) {
   const src = Engine.src;
   if (!Engine.active || !src || src.kind === 'preview') return;
-  const opt = subOpt(src.ts, key);
-  if (!opt) return;
-  Engine.setSub(opt[2], key);
-  if (src.kind === 'free') { S.free.sub = key; save(); renderFree(); }
+  Engine.setMix({ ...src.mix, [k]: v });
+  if (src.kind === 'free') { S.free.mix = { ...Engine.src.mix }; save(); renderFree(); }
 }
 function toggleSong(song) {
   if (playingSongId() === song.id) Engine.stop();
@@ -884,10 +923,10 @@ function saveNudge() {
   if (!src || src.kind !== 'song') return;
   const song = findSong(src.setlistId, src.songId);
   if (!song) return;
-  song.bpm = src.bpm; song.sub = src.subKey;
-  src.baseBpm = src.bpm; src.baseSub = src.subKey;
+  song.bpm = src.bpm; song.mix = { ...src.mix };
+  src.baseBpm = src.bpm; src.baseMix = { ...src.mix };
   save(); renderList(); renderDock();
-  toast(`「${song.title}」を ${song.bpm} BPM・${meterText(song)} で保存しました`);
+  toast(`「${song.title}」を ${song.bpm} BPM・今のミックスで保存しました`);
 }
 function freeToggle() {
   freeTempo?.flush();
@@ -961,27 +1000,89 @@ function tempoHTML() {
     <div class="field"><div class="field-label">拍子</div>
       <div class="meters">${METERS.map(m => `<button type="button" data-t="ts" data-v="${m}">${m}</button>`).join('')}</div>
     </div>
-    <div class="field"><div class="field-label">裏（拍の間も鳴らす）<span>音量は設定の「裏拍」</span></div>
-      <div class="seg" data-t="subs"></div>
+    <div class="field"><div class="field-label">ミキサー<span>名前タップでオン/オフ・上下ドラッグで音量</span></div>
+      <div class="mixer" data-t="mixer"></div>
     </div>
   </div>`;
 }
-// model = { bpm, ts, sub } を画面の操作と結びつける。onChange(field) で呼び出し側に通知。
+
+/* ---------- ミキサー（縦フェーダー） ---------- */
+// フェーダーの名前をタップ＝オン/オフ（切る前の音量を覚えておく）、トラックを上下にドラッグ＝音量（5%刻み）
+const lastLevel = {};
+function renderMixer(el, ts, mix, disabled) {
+  const kind = kindOf(ts);
+  if (el.dataset.kind !== kind) {
+    el.dataset.kind = kind;
+    el.style.gridTemplateColumns = `repeat(${LAYERS[kind].length}, minmax(0, 1fr))`;
+    el.innerHTML = LAYERS[kind].map(([k, l]) => `
+      <div class="fader" data-k="${k}">
+        <button type="button" class="fader-label" data-k="${k}">${l}</button>
+        <div class="fader-track" data-k="${k}" role="slider" aria-label="${l}の音量" aria-valuemin="0" aria-valuemax="100"><div class="fader-fill"></div></div>
+        <span class="fader-val num"></span>
+      </div>`).join('');
+  }
+  el.classList.toggle('disabled', !!disabled);
+  for (const f of el.querySelectorAll('.fader')) {
+    const k = f.dataset.k, v = mix?.[k] ?? 0, pct = Math.round(v * 100);
+    f.querySelector('.fader-fill').style.height = `${pct}%`;
+    f.querySelector('.fader-val').textContent = pct;
+    const tr = f.querySelector('.fader-track');
+    tr.setAttribute('aria-valuenow', pct);
+    tr.setAttribute('aria-disabled', String(!!disabled));
+    tr.tabIndex = disabled ? -1 : 0;
+    const lb = f.querySelector('.fader-label');
+    lb.classList.toggle('off', v <= 0);
+    lb.disabled = !!disabled;
+    lb.setAttribute('aria-pressed', String(v > 0));
+  }
+}
+// el ごとに1回だけ呼ぶ。getMix() で現在値、onSet(k, v) で変更を通知
+function attachMixer(el, getMix, onSet) {
+  let drag = null;
+  const levelAt = (tr, y) => { const r = tr.getBoundingClientRect(); return clamp(Math.round((1 - (y - r.top) / r.height) * 20) / 20, 0, 1); };
+  const locked = () => el.classList.contains('disabled');
+  el.addEventListener('pointerdown', e => {
+    const tr = e.target.closest('.fader-track');
+    if (!tr || locked() || e.button !== 0) return;
+    e.preventDefault(); drag = tr;
+    try { tr.setPointerCapture(e.pointerId); } catch {}
+    onSet(tr.dataset.k, levelAt(tr, e.clientY));
+  });
+  el.addEventListener('pointermove', e => { if (drag) onSet(drag.dataset.k, levelAt(drag, e.clientY)); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => el.addEventListener(ev, () => { drag = null; }));
+  el.addEventListener('keydown', e => {
+    const tr = e.target.closest('.fader-track');
+    if (!tr || locked()) return;
+    const v = getMix()?.[tr.dataset.k] ?? 0;
+    const n = { ArrowUp: v + 0.05, ArrowRight: v + 0.05, ArrowDown: v - 0.05, ArrowLeft: v - 0.05, Home: 0, End: 1 }[e.key];
+    if (n === undefined) return;
+    e.preventDefault(); e.stopPropagation();
+    onSet(tr.dataset.k, clamp(Math.round(n * 20) / 20, 0, 1));
+  });
+  el.addEventListener('click', e => {
+    const b = e.target.closest('.fader-label');
+    if (!b || b.disabled) return;
+    const k = b.dataset.k, v = getMix()?.[k] ?? 0;
+    if (v > 0) { lastLevel[k] = v; onSet(k, 0); }
+    else onSet(k, lastLevel[k] || (k === 'accent' || k === 'beat' ? 1 : 0.7));
+  });
+}
+
+// model = { bpm, ts, mix } を画面の操作と結びつける。onChange(field) で呼び出し側に通知。
 function bindTempo(root, model, onChange) {
   const q = s => root.querySelector(s);
-  const bpmIn = q('[data-t="bpm"]'), range = q('[data-t="range"]'), tapBtn = q('[data-t="tap"]'), subs = q('[data-t="subs"]');
+  const bpmIn = q('[data-t="bpm"]'), range = q('[data-t="range"]'), tapBtn = q('[data-t="tap"]'), mixerEl = q('[data-t="mixer"]');
   const sync = () => {
     if (document.activeElement !== bpmIn) bpmIn.value = model.bpm;
     range.value = model.bpm;
-    const kind = meterInfo(model.ts).kind;
-    q('[data-t="unit"]').textContent = UNIT_LABEL[kind];
+    q('[data-t="unit"]').textContent = UNIT_LABEL[kindOf(model.ts)];
     root.querySelectorAll('[data-t="ts"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === model.ts)));
-    if (subs.dataset.kind !== kind) {
-      subs.dataset.kind = kind;
-      subs.innerHTML = SUB_OPTIONS[kind].map(o => `<button type="button" data-t="sub" data-v="${o[0]}">${o[1]}</button>`).join('');
-    }
-    subs.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === model.sub)));
+    renderMixer(mixerEl, model.ts, model.mix, false);
   };
+  attachMixer(mixerEl, () => model.mix, (k, v) => {
+    if ((model.mix[k] ?? 0) === v) return;
+    model.mix = { ...model.mix, [k]: v }; sync(); onChange('mix');
+  });
   const setBpm = v => {
     const b = clampBpm(v);
     if (b === model.bpm) { sync(); return; }
@@ -1000,17 +1101,15 @@ function bindTempo(root, model, onChange) {
   root.querySelectorAll('[data-t="step"]').forEach(b => holdRepeat(b, () => setBpm(model.bpm + Number(b.dataset.d))));
   root.querySelectorAll('[data-t="ts"]').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.v === model.ts) return;
-    const prevKind = meterInfo(model.ts).kind;
+    const prevKind = kindOf(model.ts);
     model.ts = b.dataset.v;
-    // 4/4 ⇔ 6/8 のように数え方が変わるときは、その拍子の定番に戻す（6/8 は8分を刻むのが基本）
-    model.sub = meterInfo(model.ts).kind !== prevKind ? defaultSub(model.ts) : normalizeSub(model.ts, model.sub);
+    // 4/4 ⇔ 6/8 のように数え方が変わるときは、拍の間のレイヤーをその拍子の定番に戻す（1拍目・表はそのまま）
+    if (kindOf(model.ts) !== prevKind) {
+      const d = defaultMix(model.ts);
+      model.mix = { ...model.mix, e8: d.e8, t3: d.t3, s16: d.s16 };
+    }
     sync(); onChange('ts');
   }));
-  subs.addEventListener('click', e => {
-    const b = e.target.closest('button[data-v]');
-    if (!b || b.dataset.v === model.sub) return;
-    model.sub = b.dataset.v; sync(); onChange('sub');
-  });
   const tapper = makeTapper(v => setBpm(v));
   let hitTimer = 0;
   const hit = () => { tapper(); tapBtn.classList.add('hit'); clearTimeout(hitTimer); hitTimer = setTimeout(() => tapBtn.classList.remove('hit'), 110); };
@@ -1082,7 +1181,7 @@ function dialog({ title, message = '', input = null, ok = 'OK', danger = false }
 function openEditor(songId, preset = null) {
   const sl = cur();
   const orig = songId ? sl.songs.find(s => s.id === songId) : null;
-  const draft = orig ? { ...orig } : { id: uid(), title: '', bpm: 120, ts: '4/4', sub: 'none', note: '', ...(preset || {}) };
+  const draft = orig ? { ...orig, mix: { ...orig.mix } } : { id: uid(), title: '', bpm: 120, ts: '4/4', mix: defaultMix('4/4'), note: '', ...(preset || {}) };
   const el = openSheet(`
     <div class="sheet-head"><button class="text-btn" data-x="cancel">キャンセル</button><h2>${orig ? '曲を編集' : `「${esc(sl.name)}」に追加`}</h2><button class="text-btn primary" data-x="save">保存</button></div>
     <div class="stack">
@@ -1106,7 +1205,7 @@ function openEditor(songId, preset = null) {
   const tempo = bindTempo(el, draft, field => {
     if (!previewing()) return;
     if (field === 'bpm') Engine.setBpm(draft.bpm);
-    else if (field === 'sub') Engine.setSub(toEngine(draft).sub, draft.sub);
+    else if (field === 'mix') Engine.setMix(draft.mix);
     else startPreview();
   });
   previewBtn.addEventListener('click', () => {
@@ -1131,9 +1230,9 @@ function openEditor(songId, preset = null) {
     if (wasPlayingThis) {
       if (src.ts !== target.ts) playSong(target, sl.id); // 拍子が変わったら頭から
       else {
-        src.title = target.title; src.baseBpm = target.bpm; src.baseSub = target.sub;
+        src.title = target.title; src.baseBpm = target.bpm; src.baseMix = { ...target.mix };
         Engine.setBpm(target.bpm);
-        if (src.subKey !== target.sub) Engine.setSub(toEngine(target).sub, target.sub);
+        Engine.setMix(target.mix);
       }
     }
     if (preset) ui.view = 'setlist';
@@ -1162,13 +1261,14 @@ function parseBulk(text) {
       .replace(/^\d{1,3}\s*[.)．）:：]\s*/, '');
     if (!line) continue;
     const toks = line.split(/\s+/);
-    let ts = '4/4', sub = null, bpmAt = -1, bpm = null;
+    let ts = '4/4', bpmAt = -1, bpm = null;
+    const subs = [];
     const skip = new Set();
     toks.forEach((tok, i) => {
       if (METERS.includes(tok)) { ts = tok; skip.add(i); }
-      else if (/^(8分裏?|裏|8th)$/i.test(tok)) { sub = '8th'; skip.add(i); }
-      else if (/^(16分|16th)$/i.test(tok)) { sub = '16th'; skip.add(i); }
-      else if (/^(3連|三連)$/.test(tok)) { sub = 'triplet'; skip.add(i); }
+      else if (/^(8分裏?|裏|8th)$/i.test(tok)) { subs.push('8th'); skip.add(i); }
+      else if (/^(16分|16th)$/i.test(tok)) { subs.push('16th'); skip.add(i); }
+      else if (/^(3連|三連)$/.test(tok)) { subs.push('triplet'); skip.add(i); }
     });
     for (let i = toks.length - 1; i >= 0; i--) {
       if (skip.has(i)) continue;
@@ -1176,7 +1276,11 @@ function parseBulk(text) {
       if (m && Number(m[1]) >= BPM_MIN && Number(m[1]) <= BPM_MAX) { bpm = Number(m[1]); bpmAt = i; break; }
     }
     const title = toks.filter((_, i) => i !== bpmAt && !skip.has(i)).join(' ').slice(0, 80) || '無題';
-    out.push({ title, bpm: bpm ?? 120, noBpm: bpm === null, ts, sub: sub ? normalizeSub(ts, sub) : defaultSub(ts) });
+    // 書かれた裏はすべてオン（重ねて鳴らせる）。何も書かなければその拍子の定番
+    const mix = subs.length
+      ? subs.map(x => mixFromSub(ts, x)).reduce((a, b) => ({ ...a, e8: Math.max(a.e8, b.e8), t3: Math.max(a.t3, b.t3), s16: Math.max(a.s16, b.s16) }))
+      : defaultMix(ts);
+    out.push({ title, bpm: bpm ?? 120, noBpm: bpm === null, ts, mix });
   }
   return out;
 }
@@ -1205,7 +1309,7 @@ function openBulk() {
     const rows = update();
     if (!rows.length) return;
     const first = rows[0];
-    for (const r of rows) sl.songs.push({ id: uid(), title: r.title, bpm: r.bpm, ts: r.ts, sub: r.sub, note: '' });
+    for (const r of rows) sl.songs.push({ id: uid(), title: r.title, bpm: r.bpm, ts: r.ts, mix: r.mix, note: '' });
     save(); closeSheet(); render();
     toast(`${rows.length}曲を追加しました`);
     const firstNew = sl.songs[sl.songs.length - rows.length];
@@ -1292,13 +1396,15 @@ function decodeShared(text) {
   if (!m) return null;
   try {
     const p = JSON.parse(b64uDecode(m[1]));
-    const toList = x => sanitizeSetlist({ name: x?.n, songs: (Array.isArray(x?.s) ? x.s : []).map(a => ({ title: a[0], bpm: a[1], ts: a[2], sub: a[3], note: a[4] })) });
+    // 4番目は v1.4 以降ミックス配列 [1拍目, 表, 8分, 3連, 16分]（0〜100）、それ以前は裏のキー文字列
+    const song = a => ({ title: a[0], bpm: a[1], ts: a[2], mix: Array.isArray(a[3]) ? a[3] : undefined, sub: typeof a[3] === 'string' ? a[3] : undefined, note: a[4] });
+    const toList = x => sanitizeSetlist({ name: x?.n, songs: (Array.isArray(x?.s) ? x.s : []).map(song) });
     const lists = (Array.isArray(p.L) ? p.L : [p]).map(toList).filter(Boolean);
     return lists.length ? lists : null;
   } catch { return null; }
 }
 function shareUrl(lists) {
-  const pack = l => ({ n: l.name, s: l.songs.map(s => [s.title, s.bpm, s.ts, s.sub, s.note]) });
+  const pack = l => ({ n: l.name, s: l.songs.map(s => [s.title, s.bpm, s.ts, MIX_KEYS.map(k => Math.round((s.mix?.[k] ?? 0) * 100)), s.note]) });
   const multi = lists.length > 1;
   const payload = multi ? { v: 3, L: lists.map(pack) } : { v: 2, ...pack(lists[0]) };
   return `${location.origin}${location.pathname}#${multi ? 'importAll' : 'import'}=${b64uEncode(JSON.stringify(payload))}`;
@@ -1376,16 +1482,12 @@ function openSettings() {
       <div class="field"><div class="field-label">音色</div><div class="seg" data-g="sound">${SOUNDS.map(o => `<button type="button" data-v="${o.v}">${o.label}</button>`).join('')}</div></div>
       <div class="field"><div class="field-label">音量</div>
         <div class="slider-row"><span>全体</span><input type="range" min="0" max="100" step="1" data-k="volume" aria-label="全体の音量"><span class="v num" data-v="volume"></span></div>
-      </div>
-      <div class="field"><div class="field-label">バランス <span>裏拍＝8分裏・3連・16分など拍の間の音</span></div>
-        ${MIX.map(m => `<div class="slider-row"><span>${m.label}</span><input type="range" min="0" max="100" step="1" data-k="${m.k}" aria-label="${m.label}の音量"><span class="v num" data-v="${m.k}"></span></div>`).join('')}
-        <p class="hint">裏を鳴らすかどうかは、再生中に下のプレイヤーの「裏」でワンタップで切り替えられます。</p>
+        <p class="hint">1拍目・表・8分裏・3連・16分の音量は、再生中に下のプレイヤーのミキサーで曲ごとに調整できます（名前タップでオン/オフ、上下ドラッグで音量、「保存」で曲に記録）。</p>
       </div>
       <div class="field"><div class="field-label">セトリ再生のカウント</div>
         <div class="seg" data-g="count">${COUNT_MODES.map(o => `<button type="button" data-v="${o.v}">${o.label}</button>`).join('')}</div>
         <p class="hint">「1小節で停止」はテンポを耳に入れてからカウントを出すとき用。フリーでは常に鳴らし続けます。</p>
       </div>
-      <div class="toggle-row"><div><div class="t">1拍目を高い音にする</div><p class="hint">オフにすると1拍目も表拍と同じ音</p></div><button type="button" class="switch" role="switch" data-x="accent" aria-label="1拍目を高い音にする"></button></div>
       <div class="toggle-row"><div><div class="t">画面フラッシュ</div><p class="hint">拍に合わせて画面が光る（音が聞き取りにくいステージ用）</p></div><button type="button" class="switch" role="switch" data-x="flash" aria-label="画面フラッシュ"></button></div>
       <div class="field"><div class="field-label">バックアップ</div>
         <div class="two"><button type="button" class="ghost-btn" data-x="export">書き出し</button><button type="button" class="ghost-btn" data-x="import">読み込み</button></div>
@@ -1398,26 +1500,19 @@ function openSettings() {
         <p class="hint center kbd-only">Space: 再生・停止　←→: 曲送り　↑↓: テンポ</p>
       </div>
     </div>`);
-  const getV = k => (k === 'volume' ? st.volume : st.mix[k]);
-  const setV = (k, v) => { if (k === 'volume') st.volume = v; else st.mix[k] = v; };
+  const vol = el.querySelector('input[data-k="volume"]');
   const sync = () => {
     el.querySelectorAll('[data-g="sound"] button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === st.sound)));
     el.querySelectorAll('[data-g="count"] button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === st.countBars)));
-    el.querySelector('[data-x="accent"]').setAttribute('aria-checked', String(st.accent));
     el.querySelector('[data-x="flash"]').setAttribute('aria-checked', String(st.flash));
-    el.querySelectorAll('input[data-k]').forEach(r => {
-      const pct = Math.round(getV(r.dataset.k) * 100);
-      r.value = pct;
-      el.querySelector(`[data-v="${r.dataset.k}"]`).textContent = `${pct}%`;
-    });
+    vol.value = Math.round(st.volume * 100);
+    el.querySelector('[data-v="volume"]').textContent = `${vol.value}%`;
   };
   sync();
   const changed = () => { save(); sync(); renderDock(); renderFree(); };
-  el.querySelectorAll('input[data-k]').forEach(r => {
-    r.addEventListener('input', () => { setV(r.dataset.k, Number(r.value) / 100); Engine.setVolume(); changed(); });
-    // 止まっているときは離した瞬間に1音鳴らして確認できるように
-    r.addEventListener('change', () => { if (!Engine.active) Engine.blip(r.dataset.k === 'volume' ? 'accent' : r.dataset.k); });
-  });
+  vol.addEventListener('input', () => { st.volume = Number(vol.value) / 100; Engine.setVolume(); changed(); });
+  // 止まっているときは離した瞬間に1音鳴らして確認できるように
+  vol.addEventListener('change', () => { if (!Engine.active) Engine.blip(); });
   el.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -1425,8 +1520,7 @@ function openSettings() {
     if (g === 'sound') { st.sound = b.dataset.v; changed(); if (!Engine.active) Engine.blip(); return; }
     if (g === 'count') { st.countBars = Number(b.dataset.v); changed(); return; }
     const x = b.dataset.x;
-    if (x === 'accent') { st.accent = !st.accent; changed(); }
-    else if (x === 'flash') { st.flash = !st.flash; changed(); }
+    if (x === 'flash') { st.flash = !st.flash; changed(); }
     else if (x === 'export') exportBackup();
     else if (x === 'shareall') shareLists(S.setlists);
     else if (x === 'import') el.querySelector('[data-x="file"]').click();
@@ -1478,9 +1572,9 @@ $('#nextBtn').addEventListener('click', () => step(1));
 holdRepeat($('#bpmMinus'), () => nudge(-1));
 holdRepeat($('#bpmPlus'), () => nudge(1));
 $('#saveBpm').addEventListener('click', saveNudge);
-$('#dockSubs').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b && !b.disabled) setLiveSub(b.dataset.v); });
+attachMixer($('#dockMixer'), () => Engine.src?.mix, setLiveMix);
 $('#freePlay').addEventListener('click', freeToggle);
-$('#freeAdd').addEventListener('click', () => { freeTempo.flush(); openEditor(null, { ...S.free }); });
+$('#freeAdd').addEventListener('click', () => { freeTempo.flush(); openEditor(null, { bpm: S.free.bpm, ts: S.free.ts, mix: { ...S.free.mix } }); });
 
 document.addEventListener('keydown', e => {
   if (sheet) { if (e.key === 'Escape') closeSheet(); return; }
@@ -1504,7 +1598,7 @@ freeTempo = bindTempo($('#freeTempo'), S.free, field => {
   save();
   if (Engine.active && Engine.src?.kind === 'free') {
     if (field === 'bpm') Engine.setBpm(S.free.bpm);
-    else if (field === 'sub') Engine.setSub(toEngine(S.free).sub, S.free.sub);
+    else if (field === 'mix') Engine.setMix(S.free.mix);
     else Engine.start({ kind: 'free', title: 'フリー', ...toEngine(S.free) });
   }
   renderFree();
